@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<jardesc>
+    <jar path="D:/Apps/MediaSnatcher4.jar"/>
+    <options buildIfNeeded="true" compress="false" descriptionLocation="/Web Snatcher/src/picSnatcher/mediaSnatcher4/MediaSnatcher4.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="true" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="false" mainClassHandleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{Main.java[Main" manifestLocation="/Web Snatcher/src/picSnatcher/mediaSnatcher/MediaSnatcher4" manifestVersion="1.0" reuseManifest="true" saveManifest="true" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{ForwardRemover.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{OptionPanel.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{PageParser.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{Site.java"/>
+        <file path="/Web Snatcher/src/picSnatcher/mediaSnatcher4/pageparsers.ms4.conf"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{PictureFormat.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{Main.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher.extension.forwarder"/>
+        <file path="/Web Snatcher/src/picSnatcher/mediaSnatcher4/forwarders.ms4.conf"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{OptionKeys.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{PageReader.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{UrlMap.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher.extension.parser"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{Options.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{Session.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{Downloader.java"/>
+        <javaElement handleIdentifier="=Web Snatcher/src&lt;picSnatcher.mediaSnatcher{ErrorCodes.java"/>
+    </selectedElements>
+</jardesc>

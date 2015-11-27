@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<jardesc>
+    <jar path="D:/Apps/picSnatcher.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/ClassTest/picSnatcher/picSnatcher.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="true" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="true" mainClassHandleIdentifier="=ClassTest/&lt;picSnatcher{PicSnatcher.java[PicSnatcher" manifestLocation="/ClassTest/picSnatcher/picSnatcher" manifestVersion="1.0" reuseManifest="false" saveManifest="true" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.gui.event{ButtonPanelEvent.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.io{FileStreamIO.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple{debug.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.gui{ButtonPanel.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.gui{RadioButtonGroup.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.util{Utils.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.gui.event{ButtonPanelListener.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;simple.gui{SJPanel.java"/>
+        <javaElement handleIdentifier="=ClassTest/&lt;picSnatcher{PicSnatcher.java"/>
+    </selectedElements>
+    <fatjar builder="org.eclipse.jdt.ui.plain_jar_builder" launchConfig=""/>
+</jardesc>
