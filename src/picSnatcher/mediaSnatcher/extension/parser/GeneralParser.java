@@ -51,6 +51,10 @@ public class GeneralParser extends PageParser{
 			if(!isRunning()) break;
 			if(tag.hasProperty(Constants.atr_src)){
 				if(tag.getName().equals(Constants.tag_img)){
+					if(!tag.hasProperty(Constants.atr_src)){
+						log.warning("Img missing src attribute", tag.toStringTagOnly());
+						continue;
+					}
 					String size;
 					if(tag.hasProperty(Constants.atr_width)){
 						size= tag.getProperty(Constants.atr_width);
@@ -93,7 +97,9 @@ public class GeneralParser extends PageParser{
 			// log.debug(tag.toStringTagOnly());
 			// log.debug("before",link);
 			link=createURL(link,page,basehref);
-			if(link==null) continue;
+			if(link==null){
+				continue;
+			}
 			lcount++;
 			session.setCurrentProgressBarText("Links:"+lcount);
 			link=UrlUtil.URLescape2(link);
@@ -105,9 +111,8 @@ public class GeneralParser extends PageParser{
 			if(tag.hasProperty(Constants.atr_href)){
 				addToReadQueue(tmp,page,depth);
 			}
-
 			session.addLink(tmp,page,tag.getName().equals(Constants.tag_img));
-		}
+		}// end for
 		return true;
 	}
 

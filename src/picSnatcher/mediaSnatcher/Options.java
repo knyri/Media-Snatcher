@@ -24,6 +24,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import picSnatcher.mediaSnatcher.extension.OptionPanel;
 import simple.gui.AboutWindow;
 import simple.gui.SDialog;
 import simple.gui.component.JNumberField;
@@ -142,9 +143,10 @@ public final class Options {
 	private final JTextField pageTitle = new JTextField();
 	private final SDialog optionsFrame, advOptions;
 	private final Main parent;
+	private final JTabbedPane jtPane;
 	//	private final Session session;
 	public Options(final Main frame, final Session ses) {
-		JTabbedPane jtPane = new JTabbedPane();
+		jtPane = new JTabbedPane();
 		options.putAll(DEFAULTS);
 		//FLOW: create UI
 		parent = frame;
@@ -413,6 +415,9 @@ public final class Options {
 		setupAdvOptions();
 		advOptions.center();
 		advOptions.setVisible(true);
+	}
+	public void addPage(OptionPanel panel, String title){
+		jtPane.add(title, new JScrollPane(panel.getPanel()));
 	}
 	protected void savePref() {
 		savePref("pref");

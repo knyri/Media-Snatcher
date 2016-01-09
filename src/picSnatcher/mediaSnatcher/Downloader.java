@@ -577,8 +577,8 @@ public class Downloader implements Runnable {
 		if (option.alternateNumbering()) {//alternate numbering scheme
 			Stmp = fName.substring(0, fName.lastIndexOf("."));
 			fName = fName.replaceAll(Stmp,
-					do_str.padLeft(3, '0', String.valueOf(entryNum)) + "_" +
-					do_str.padLeft(4, '0', String.valueOf(fileNum)));
+					do_str.padLeft(4, '0', Integer.toString(entryNum)) + "_" +
+					do_str.padLeft(3, '0', Integer.toString(fileNum)));
 		} else {//can't do both
 			//get sever suggested filename(if one)
 			Stmp=null;

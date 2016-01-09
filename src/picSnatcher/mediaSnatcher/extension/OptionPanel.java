@@ -16,6 +16,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import picSnatcher.mediaSnatcher.Options;
@@ -29,6 +31,11 @@ import simple.util.CIHashtable;
 /**
  * All names are case insensitive.
  * It's up to the extension to manage dependency. That is, disabling sub-checkboxes if the parent is unchecked.
+ * Sample XML:
+ * &lt;OptionPanel&gt;
+ * 	&lt;text name="username" tooltip="Enter your username" label="Username:" value="" /&gt;
+ * 	&lt;text name="password" tooltip="Enter you password" label="Password:" value="" /&gt;
+ * &lt;/OptionPanel&gt;
  * <hr>
  * <br>Created: Jan 21, 2011
  * @author Kenneth Pierce
@@ -40,6 +47,9 @@ public final class OptionPanel {
 	public OptionPanel(String title) {
 		this.title= title;
 	}
+	public JComponent getComponent(String name){
+		return items.get(name);
+	}
 	/**
 	 * Builds the option page based on the XML source
 	 * @param title
@@ -48,7 +58,7 @@ public final class OptionPanel {
 	 * @throws IOException
 	 * @throws ParseException
 	 */
-	public OptionPanel(String title, File source) throws FileNotFoundException, IOException, ParseException{
+	public OptionPanel(String title, File source){
 		this(title);
 		try(FileReader in= new FileReader(source)){
 			Page page= InlineLooseParser.parse(in);
@@ -58,6 +68,11 @@ public final class OptionPanel {
 			for(Tag t : tag){
 				build(t);
 			}
+		}catch(IOException | ParseException e){
+			JTextArea error= new JTextArea();
+			error.append("ERROR: Failed to load options\n");
+			error.append(e.toString());
+			center.add(error);
 		}
 	}
 	private final CIString
@@ -80,7 +95,9 @@ public final class OptionPanel {
 
 		tooltip= tag.getProperty(atrTooltip);
 
-		if(tag.getName().equals("text")){
+		if(tag.getName().equals("textarea")){
+			addTextArea(name, label, tooltip);
+		}else if(tag.getName().equals("text")){
 			addTextField(name, label, tooltip);
 		}else if(tag.getName().equals("check")){
 			if(!tag.getParent().getName().equals("optionpanel")){
@@ -140,6 +157,23 @@ public final class OptionPanel {
 		items.put(name, c);
 		JPanel tmp = SJPanel.makeBoxLayoutPanelX();
 		tmp.add(new JLabel(display));
+		tmp.add(c);
+		center.add(tmp);
+	}
+	/**
+	 * @param name Name used to get this value
+	 * @param display Label
+	 * @param toolTip Tooltip
+	 */
+	public void addTextArea(String name, String display, String toolTip) {
+		JComponent c = new JTextArea();
+		c.setToolTipText(toolTip);
+		items.put(name, c);
+		c= new JScrollPane(c);
+		c.setSize(300,300);
+		JPanel tmp = SJPanel.makeBoxLayoutPanelY();
+		tmp.add(new JLabel(display));
+		tmp.add(c);
 		center.add(tmp);
 	}
 	/**

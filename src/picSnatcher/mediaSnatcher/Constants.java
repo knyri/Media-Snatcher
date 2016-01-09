@@ -44,6 +44,8 @@ public final class Constants{
 		atr_onselect=new CIString("onselect"),
 		//on=new CIString("on"),
 		atr_rel=new CIString("rel"),
+		atr_title= tag_title,
+		atr_alt= new CIString("alt"),
 		atr_type=new CIString("type"),
 		atr_style=new CIString("style"),
 		atr_class=new CIString("class"),

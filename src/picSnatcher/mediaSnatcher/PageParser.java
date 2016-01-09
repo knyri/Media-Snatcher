@@ -155,7 +155,7 @@ public abstract class PageParser {
 	 * @param link link from the page
 	 * @param page page address
 	 * @param basehref base address(null if none)
-	 * @return The URL or NULL if the scheme is not HTTP
+	 * @return The URL or NULL if the scheme is not HTTP or HTTPS
 	 */
 	protected static final String createURL(String linko, final Uri page, final String basehref) {
 		linko = linko.replaceAll("[\n\r\t\\\\\"\\\\']", "");
@@ -171,7 +171,7 @@ public abstract class PageParser {
 		log.debug("link",link.getScheme()+"]["+link.getHost()+"]["+link.getPath()+"]["+link.getFile()+"]["+link.getQuery()+"]["+link.getFragment());
 		log.debug("page",page.getScheme()+"]["+page.getHost()+"]["+page.getPath()+"]["+page.getFile()+"]["+page.getQuery()+"]["+page.getFragment());
 		//Return null if the scheme is not http
-		if (!link.getScheme().isEmpty() && !"http".equalsIgnoreCase(link.getScheme())) return null;
+		if (!link.getScheme().isEmpty() && !"http".equalsIgnoreCase(link.getScheme()) && !"https".equalsIgnoreCase(link.getScheme())) return null;
 		if (link.getScheme().isEmpty()) {
 			//no scheme. Get it from the page
 			if (link.getHost().isEmpty()) {
