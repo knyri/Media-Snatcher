@@ -8,6 +8,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -19,6 +21,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.text.JTextComponent;
 
 import picSnatcher.mediaSnatcher.Options;
 import simple.CIString;
@@ -69,6 +72,31 @@ public final class OptionPanel {
 				build(t);
 			}
 		}catch(IOException | ParseException e){
+			JTextArea error= new JTextArea();
+			error.append("ERROR: Failed to load options\n");
+			error.append(e.toString());
+			center.add(error);
+		}
+	}
+	/**
+	 * Builds the option page based on the XML source
+	 * @param title
+	 * @param source
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws ParseException
+	 */
+	public OptionPanel(String title, InputStream source){
+		this(title);
+		try(InputStreamReader in= new InputStreamReader(source)){
+			Page page= InlineLooseParser.parse(in);
+			Tag tag= page.getRoot("OptionPanel");
+			if(tag == null)
+				throw new IllegalArgumentException("Not a valid OptionPanel document.");
+			for(Tag t : tag){
+				build(t);
+			}
+		}catch(Exception e){
 			JTextArea error= new JTextArea();
 			error.append("ERROR: Failed to load options\n");
 			error.append(e.toString());
@@ -186,8 +214,8 @@ public final class OptionPanel {
 			return;
 		if (c instanceof JCheckBox)
 			((JCheckBox)c).setSelected(Options.getTF(value));
-		if (c instanceof JTextField)
-			((JTextField)c).setText(value);
+		if (c instanceof JTextComponent)
+			((JTextComponent)c).setText(value);
 	}
 	/**
 	 * @param name
@@ -199,8 +227,8 @@ public final class OptionPanel {
 			return null;
 		if (c instanceof JCheckBox)
 			return Options.getTF(((JCheckBox)c).isSelected());
-		if (c instanceof JTextField)
-			return ((JTextField)c).getText();
+		if (c instanceof JTextComponent)
+			return ((JTextComponent)c).getText();
 		return null;
 	}
 	/**

@@ -1,14 +1,9 @@
 package picSnatcher.mediaSnatcher.extension.parser;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-
-import javax.swing.JTextArea;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import picSnatcher.mediaSnatcher.Constants;
 import picSnatcher.mediaSnatcher.OptionKeys;
@@ -29,62 +24,39 @@ public class e621_net extends PageParser{
 	private static final Log log=LogFactory.getLogFor(e621_net.class);
 	static{
 		log.setPrintTime(true);
+		log.setPrintDebug(true);
 	}
-	private final OptionPanel optionPanel= new OptionPanel("e621.net", new File("e621_netOptions.xml"));
+	private static final OptionPanel optionPanel= new OptionPanel("e621.net", e621_net.class.getClassLoader().getResourceAsStream("e621_netOptions.xml"));
 	private final List<WantedFilter> wanted= new ArrayList<>();
 	private final List<IgnoreFilter> ignored= new ArrayList<>();
-	public e621_net(PageReader preader,Session session){
+	private static volatile boolean optionsAdded= false;
+	public e621_net(final PageReader preader,final Session session){
 		super(preader,session);
-		session.getOptions().addPage(optionPanel,"e621.net");
-		((JTextArea)optionPanel.getComponent("wanted")).getDocument().addDocumentListener(new DocumentListener(){
-			@Override
-			public void changedUpdate(DocumentEvent e){
-				wanted.clear();
-				String text= ((JTextArea)optionPanel.getComponent("wanted")).getText();
-				for(String row: text.split("\n")){
-					wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
+		if(session == null){
+			return;
+		}
+		if(!optionsAdded){
+			// not threaded so don't need fancy logic here
+			optionsAdded= true;
+			session.getOptions().addPage(optionPanel,"e621.net");
+		}
+		String text= optionPanel.getItemValue("wanted");
+		for(String row: text.split("\n")){
+			wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
+		}
+		text= optionPanel.getItemValue("ignored");
+		for(String row: text.split("\n")){
+			List<String> ignore= new LinkedList<>(),
+				exception= new LinkedList<>();
+			for(String tag: row.split(" ")){
+				if(tag.charAt(0) == '-'){
+					exception.add(tag.substring(1));
+				}else{
+					ignore.add(tag);
 				}
 			}
-			@Override
-			public void insertUpdate(DocumentEvent e){
-				wanted.clear();
-				String text= ((JTextArea)optionPanel.getComponent("wanted")).getText();
-				for(String row: text.split("\n")){
-					wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
-				}
-			}
-			@Override
-			public void removeUpdate(DocumentEvent arg0){}
-		});
-		((JTextArea)optionPanel.getComponent("ignore")).getDocument().addDocumentListener(new DocumentListener(){
-			@Override
-			public void changedUpdate(DocumentEvent e){
-				ignored.clear();
-				String text= ((JTextArea)optionPanel.getComponent("ignore")).getText();
-				for(String row: text.split("\n")){
-					List<String> ignore= new LinkedList<>(),
-						exception= new LinkedList<>();
-					for(String tag: row.split(" ")){
-						if(tag.charAt(0) == '-'){
-							exception.add(tag.substring(1));
-						}else{
-							ignore.add(tag);
-						}
-					}
-					ignored.add(new IgnoreFilter(ignore,exception));
-				}
-			}
-			@Override
-			public void insertUpdate(DocumentEvent e){
-				ignored.clear();
-				String text= ((JTextArea)optionPanel.getComponent("ignore")).getText();
-				for(String row: text.split("\n")){
-					wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
-				}
-			}
-			@Override
-			public void removeUpdate(DocumentEvent arg0){}
-		});
+			ignored.add(new IgnoreFilter(ignore,exception));
+		}
 	}
 
 	@Override
@@ -237,8 +209,14 @@ public class e621_net extends PageParser{
 
 }
 class WantedFilter{
+	private static final Log log= LogFactory.getLogFor(WantedFilter.class);
+	static{
+		log.setPrintTime(true);
+		log.setPrintDebug(true);
+	}
 	final List<String> wanted;
 	public WantedFilter(List<String> want){
+		log.debug("new wanted filter", want);
 		wanted=want;
 	}
 	public boolean test(HashSet<String> tags){
@@ -246,21 +224,31 @@ class WantedFilter{
 	}
 }
 class IgnoreFilter{
+	private static final Log log= LogFactory.getLogFor(IgnoreFilter.class);
+	static{
+		log.setPrintTime(true);
+		log.setPrintDebug(true);
+	}
 	final List<String> ignore;
 	final List<String> exceptions;
 	public IgnoreFilter(List<String> nowant, List<String> unless){
+		log.debug("new ignore filter", nowant);
+		log.debug("unless", unless);
 		ignore= nowant;
 		exceptions= unless;
 	}
 	public boolean test(HashSet<String> tags){
 		if(!tags.containsAll(ignore)){
+			log.debug("not ignored: didn't match", tags);
 			return false;
 		}
 		for(String exception : exceptions){
 			if(tags.contains(exception)){
-				return true;
+				log.debug("not ignored: had exception", tags);
+				return false;
 			}
 		}
-		return false;
+		log.debug("ignored", tags);
+		return true;
 	}
 }
