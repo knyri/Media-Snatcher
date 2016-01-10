@@ -14,8 +14,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
+import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -427,7 +427,7 @@ public class Main implements ActionListener {
 		PrintWriter out = null;
 		try {
 			out = new PrintWriter(save);
-			for (final Map.Entry<CIString, Vector<Uri>> entry : Links.entrySet()) {
+			for (final Map.Entry<CIString, List<Uri>> entry : Links.entrySet()) {
 				for (final Uri cUrl : entry.getValue()) {
 					out.print(cUrl+"\t"+entry.getKey().toString()+"\n");
 				}//end inner for

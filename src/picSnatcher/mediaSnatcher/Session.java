@@ -11,8 +11,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import javax.swing.Timer;
 
@@ -383,7 +383,7 @@ public class Session implements Runnable {
 			} else
 				linkListfw=new FileWriter(linkListf,true);
 
-			for(Map.Entry<CIString, Vector<Uri>> entry : linksOut.entrySet()){
+			for(Map.Entry<CIString, List<Uri>> entry : linksOut.entrySet()){
 				linkListfw.write("<a href=\""+entry.getKey()+"\" target=\"_blank\">"+
 						entry.getKey()+"</a><br>\n<ul>");
 				for(Uri uri : entry.getValue()){

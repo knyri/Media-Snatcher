@@ -566,47 +566,44 @@ public class Downloader implements Runnable {
 			}
 		}
 
+		Stmp=null;
+		try{
+			Stmp = cc.getLastHeader("Content-Disposition").getValue();
+		}catch(Exception e){}
+		if (Stmp != null && !Stmp.isEmpty()) {//did we get one?
+			index = Stmp.indexOf("filename");
+			int end = 0;
+			if (index != -1) {
+				index = Stmp.indexOf('=', index)+1;
+				end = Stmp.indexOf(';', index);
+				if (end != -1) {
+					fName = Stmp.substring(index, end);
+				} else {
+					fName = Stmp.substring(index);
+				}
+				if (fName.charAt(0)=='"') {
+					fName = fName.substring(1, fName.length()-1);
+				}
+				log.information("Server suggested filename: "+fName);
+				//get the extension again
+				index = fName.lastIndexOf('.');
+				if (index != -1) {
+					ext = fName.substring(index);
+				}
+			}
+		}
 		//get extension for later
 		index = fName.lastIndexOf('.');
 		if (index != -1) {
 			ext = fName.substring(index);
-		}else
+		}else{
 			ext="";
+		}
 		if (new File(fPath+fName).exists())
 			return Downloader.CEXIST;
 		if (option.alternateNumbering()) {//alternate numbering scheme
-			Stmp = fName.substring(0, fName.lastIndexOf("."));
-			fName = fName.replaceAll(Stmp,
-					do_str.padLeft(4, '0', Integer.toString(entryNum)) + "_" +
-					do_str.padLeft(3, '0', Integer.toString(fileNum)));
-		} else {//can't do both
-			//get sever suggested filename(if one)
-			Stmp=null;
-			try{
-				Stmp = cc.getLastHeader("Content-Disposition").getValue();
-			}catch(Exception e){}
-			if (Stmp != null && !Stmp.isEmpty()) {//did we get one?
-				index = Stmp.indexOf("filename");
-				int end = 0;
-				if (index != -1) {
-					index = Stmp.indexOf('=', index)+1;
-					end = Stmp.indexOf(';', index);
-					if (end != -1) {
-						fName = Stmp.substring(index, end);
-					} else {
-						fName = Stmp.substring(index);
-					}
-					if (fName.charAt(0)=='"') {
-						fName = fName.substring(1, fName.length()-1);
-					}
-					log.information("Server suggested filename: "+fName);
-					//get the extension again
-					index = fName.lastIndexOf('.');
-					if (index != -1) {
-						ext = fName.substring(index);
-					}
-				}
-			}
+			fName = do_str.padLeft(4, '0', Integer.toString(entryNum)) + "_" +
+					do_str.padLeft(3, '0', Integer.toString(fileNum))+ext;
 		}
 
 		//FLOW:check extension

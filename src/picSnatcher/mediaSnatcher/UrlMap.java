@@ -4,11 +4,12 @@
 package picSnatcher.mediaSnatcher;
 
 import java.util.Collection;
-import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import simple.CIString;
 import simple.net.Uri;
@@ -20,9 +21,9 @@ import simple.util.logging.LogFactory;
  * Created: Jun 1, 2006
  * @author KP
  */
-public class UrlMap implements Iterable<Vector<Uri>> {
+public class UrlMap implements Iterable<List<Uri>> {
 	private static final Log log = LogFactory.getLogFor(UrlMap.class);
-	private final Hashtable<CIString, Vector<Uri>> map = new Hashtable<CIString, Vector<Uri>>();
+	private final LinkedHashMap<CIString, List<Uri>> map = new LinkedHashMap<>();
 	private int urlCount = 0;
 	public int size() {
 		return urlCount;
@@ -38,7 +39,7 @@ public class UrlMap implements Iterable<Vector<Uri>> {
 
 	public boolean containsValue(Uri tmp) {
 		synchronized (this) {
-			for (Vector<Uri> links : map.values()) {
+			for (List<Uri> links : map.values()) {
 				if (links.contains(tmp)) {
 					return true;
 				}
@@ -47,10 +48,10 @@ public class UrlMap implements Iterable<Vector<Uri>> {
 		return false;
 	}
 
-	public Vector<Uri> get(String key) {
+	public List<Uri> get(String key) {
 		return map.get(new CIString(key));
 	}
-	public Vector<Uri> get(CIString key) {
+	public List<Uri> get(CIString key) {
 		return map.get(key);
 	}
 
@@ -66,7 +67,7 @@ public class UrlMap implements Iterable<Vector<Uri>> {
 				} else
 					return false;
 			} else {//key doesn't exist, create
-				Vector<Uri> tmp = new Vector<Uri>();
+				List<Uri> tmp = new LinkedList<Uri>();
 				if (tmp.add(value)) {
 					map.put(ckey, tmp);
 					urlCount++;
@@ -86,7 +87,7 @@ public class UrlMap implements Iterable<Vector<Uri>> {
 
 	public String getKey(Uri link) {
 		//if (!map.containsValue(value)) return null;
-		for (Map.Entry<CIString, Vector<Uri>> entry : entrySet()) {
+		for (Map.Entry<CIString, List<Uri>> entry : entrySet()) {
 			for (Uri url : entry.getValue()) {
 				if (url.equals(link)) return entry.getKey().toString();
 			}
@@ -101,8 +102,8 @@ public class UrlMap implements Iterable<Vector<Uri>> {
 		}
 	}
 
-	public Vector<Uri> remove(String key) {
-		Vector<Uri> tmp = map.remove(new CIString(key));
+	public List<Uri> remove(String key) {
+		List<Uri> tmp = map.remove(new CIString(key));
 		urlCount -= tmp.size();
 		log.debug("removed key",key);
 		return tmp;
@@ -112,22 +113,22 @@ public class UrlMap implements Iterable<Vector<Uri>> {
 		return map.keySet();
 	}
 
-	public Collection<Vector<Uri>> values() {
+	public Collection<List<Uri>> values() {
 		return map.values();
 	}
 
-	public Set<Map.Entry<CIString, Vector<Uri>>> entrySet() {
+	public Set<Map.Entry<CIString, List<Uri>>> entrySet() {
 		return map.entrySet();
 	}
 	@Override
-	public Iterator<Vector<Uri>> iterator() {
+	public Iterator<List<Uri>> iterator() {
 		return map.values().iterator();
 	}
 
 	public int removeDuplicates() {
 		int removed = 0;
 		synchronized(this) {
-			for (Vector<Uri> cur : this) {
+			for (List<Uri> cur : this) {
 				for (int i = 0; i<cur.size(); i++) {
 					for (int j = i+1; j<cur.size(); j++) {
 						if (cur.get(i).equals(cur.get(j))) {
