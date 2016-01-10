@@ -207,48 +207,48 @@ public class e621_net extends PageParser{
 		return true;
 	}
 
-}
-class WantedFilter{
-	private static final Log log= LogFactory.getLogFor(WantedFilter.class);
-	static{
-		log.setPrintTime(true);
-		log.setPrintDebug(true);
-	}
-	final List<String> wanted;
-	public WantedFilter(List<String> want){
-		log.debug("new wanted filter", want);
-		wanted=want;
-	}
-	public boolean test(HashSet<String> tags){
-		return tags.containsAll(wanted);
-	}
-}
-class IgnoreFilter{
-	private static final Log log= LogFactory.getLogFor(IgnoreFilter.class);
-	static{
-		log.setPrintTime(true);
-		log.setPrintDebug(true);
-	}
-	final List<String> ignore;
-	final List<String> exceptions;
-	public IgnoreFilter(List<String> nowant, List<String> unless){
-		log.debug("new ignore filter", nowant);
-		log.debug("unless", unless);
-		ignore= nowant;
-		exceptions= unless;
-	}
-	public boolean test(HashSet<String> tags){
-		if(!tags.containsAll(ignore)){
-			log.debug("not ignored: didn't match", tags);
-			return false;
+	static class WantedFilter{
+		private static final Log log= LogFactory.getLogFor(WantedFilter.class);
+		static{
+			log.setPrintTime(true);
+			log.setPrintDebug(true);
 		}
-		for(String exception : exceptions){
-			if(tags.contains(exception)){
-				log.debug("not ignored: had exception", tags);
+		final List<String> wanted;
+		public WantedFilter(List<String> want){
+			log.debug("new wanted filter", want);
+			wanted=want;
+		}
+		public boolean test(HashSet<String> tags){
+			return tags.containsAll(wanted);
+		}
+	}
+	static class IgnoreFilter{
+		private static final Log log= LogFactory.getLogFor(IgnoreFilter.class);
+		static{
+			log.setPrintTime(true);
+			log.setPrintDebug(true);
+		}
+		final List<String> ignore;
+		final List<String> exceptions;
+		public IgnoreFilter(List<String> nowant, List<String> unless){
+			log.debug("new ignore filter", nowant);
+			log.debug("unless", unless);
+			ignore= nowant;
+			exceptions= unless;
+		}
+		public boolean test(HashSet<String> tags){
+			if(!tags.containsAll(ignore)){
+				log.debug("not ignored: didn't match", tags);
 				return false;
 			}
+			for(String exception : exceptions){
+				if(tags.contains(exception)){
+					log.debug("not ignored: had exception", tags);
+					return false;
+				}
+			}
+			log.debug("ignored", tags);
+			return true;
 		}
-		log.debug("ignored", tags);
-		return true;
 	}
 }
