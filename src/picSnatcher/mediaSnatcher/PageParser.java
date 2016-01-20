@@ -10,6 +10,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -34,14 +35,22 @@ import simple.util.logging.LogFactory;
  */
 public abstract class PageParser {
 	private static final HashMap<PageParser, Method> HANDLERS = new HashMap<PageParser, Method>();
-	protected final Session session;
-	protected final PageReader preader;
+	protected Session session;
+	protected PageReader preader;
 	private boolean run = true;
 	private static final Log log = LogFactory.getLogFor(PageParser.class);
-
+	public final void reset(final PageReader preader, final Session session){
+		this.session = session;
+		this.preader = preader;
+		reset();
+	}
+	protected abstract void reset();
 	public PageParser(final PageReader preader, final Session session) {
 		this.session = session;
 		this.preader = preader;
+	}
+	public static final Set<PageParser> getPageParsers(){
+		return HANDLERS.keySet();
 	}
 	/** Register a page parser
 	 * @param clazz
@@ -80,28 +89,17 @@ public abstract class PageParser {
 					pp=ppc;
 					break;
 				}
-			} catch (final IllegalArgumentException e) {
-				e.printStackTrace();
-			} catch (final IllegalAccessException e) {
-				e.printStackTrace();
-			} catch (final InvocationTargetException e) {
-				e.printStackTrace();
+			} catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
+				log.error(e);
 			}
 		}
 		if (pp==null){
 			log.debug("Parser used","GeneralParser");
 			return new GeneralParser(preader, ses);
 		}
-		PageParser ppc = null;
-		try {
-			ppc = pp.getClass().getConstructor(PageReader.class, Session.class).newInstance(preader, ses);
-		} catch (final Exception e) {
-			log.error(e);
-		}
-		if (ppc!=null) {
-			log.debug("#getHandler", ppc.getClass().getCanonicalName());
-		}
-		return ppc;
+		pp.reset(preader, ses);
+		log.debug("#getHandler", pp.getClass().getCanonicalName());
+		return pp;
 	}
 	/** Can the parser parse the page?
 	 * @param link URI for the page

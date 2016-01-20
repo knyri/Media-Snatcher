@@ -3,6 +3,14 @@
  */
 package picSnatcher.mediaSnatcher;
 
+import static picSnatcher.mediaSnatcher.OptionKeys.download_keepDownloadLog;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_prependPage;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_saveExternalUrlList;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_saveLinkList;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_repeat;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_saveFile;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_saveFolder;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -50,8 +58,9 @@ public class Session implements Runnable {
 	private final TimeRemainingEstimator pr_tre = TimerFactory.getTRETimer(Algorithm.SAMPLE, 15);
 	private final Main main;
 	private final Options option;
-	private final UrlMap Links = new UrlMap(),
-			linksOut=new UrlMap();
+	private final UrlMap
+		Links = new UrlMap(),
+		linksOut=new UrlMap();
 	private final HashSet<String> dlList = new HashSet<String>();
 	private final HashSet<CIString> readList = new HashSet<CIString>();
 	private final Object waiter = new Object();
@@ -80,7 +89,7 @@ public class Session implements Runnable {
 	public void addToDownloadList(final String url) {
 		if (!dlList.contains(url)) {
 			dlList.add(url);
-			if (option.keepDlLog()) {
+			if (option.getBoolean(download_keepDownloadLog)) {
 				log.information("DLLOG", "Added to list: "+url);
 				try {
 					dlLog.writeBytes(url+"\r\n");
@@ -157,11 +166,11 @@ public class Session implements Runnable {
 	public void run() {
 		run = true;
 		option.dumpOptions();
-		if (option.keepDlLog()) {
-			if (option.getOption(OptionKeys.snatcher_saveFile).isEmpty()) {
+		if (option.getBoolean(download_keepDownloadLog)) {
+			if (option.getOption(snatcher_saveFile).isEmpty()) {
 				main.Save(this);
 			}
-			final File save = new File(option.getOption(OptionKeys.snatcher_saveFile)+".dlog");
+			final File save = new File(option.getOption(snatcher_saveFile)+".dlog");
 			log.information("setup", "Save file: "+save);
 			try {
 				dlLog = new RandomAccessFile(save,"rw");
@@ -192,7 +201,7 @@ public class Session implements Runnable {
 		}
 		main.setState("Starting...");
 		do{
-			if(option.getOption(OptionKeys.snatcher_repeat).equals(Options.TRUE)){
+			if(option.getOption(snatcher_repeat).equals(Options.TRUE)){
 				log.information("setup", "AUTO REPEATING SNATCH");
 				main.frame.setTitle("Media Snatcher 4 REPEAT MODE(must manually stop)");
 			}
@@ -201,7 +210,7 @@ public class Session implements Runnable {
 			setCurrentProgressBarText("");
 			option.dumpOptions();
 
-			if (option.getOption(OptionKeys.snatcher_saveFile).isEmpty()) {
+			if (option.getOption(snatcher_saveFile).isEmpty()) {
 				final File saveFolder = SwingFactory.getDirName(null);
 				if (saveFolder==null) {
 					log.log(0x22);
@@ -211,10 +220,10 @@ public class Session implements Runnable {
 					finish();
 					return;
 				}
-				option.setOption(OptionKeys.snatcher_saveFolder, saveFolder.getAbsolutePath()+File.separatorChar);
+				option.setOption(snatcher_saveFolder, saveFolder.getAbsolutePath()+File.separatorChar);
 			} else {
-				final String tmp = option.getOption(OptionKeys.snatcher_saveFile);
-				option.setOption(OptionKeys.snatcher_saveFolder, tmp.substring(0, tmp.lastIndexOf(File.separatorChar)+1));
+				final String tmp = option.getOption(snatcher_saveFile);
+				option.setOption(snatcher_saveFolder, tmp.substring(0, tmp.lastIndexOf(File.separatorChar)+1));
 			}
 			final int totalItems = main.getList().getItemCount();
 			UriFormatIterator pf;
@@ -240,15 +249,15 @@ public class Session implements Runnable {
 			}//end for
 			log.debug("download", "DONE READING THEM ALL");
 			setStateExt("");
-			if(option.getOption(OptionKeys.download_saveExternalUrlList)==Options.TRUE)
+			if(option.getOption(download_saveExternalUrlList)==Options.TRUE)
 				saveExternalLinkList();
-			if(option.getOption(OptionKeys.download_saveLinkList)==Options.TRUE)
+			if(option.getOption(download_saveLinkList)==Options.TRUE)
 				saveLinkList();
 			if (!run) {log.log(0x30);finish();return;}
 			state = STATE_DOWNLOAD;
 			downloader = new Downloader(this, Links);
 			downloader.run();
-			if(option.getOption(OptionKeys.snatcher_repeat).equals(Options.TRUE)){
+			if(option.getOption(snatcher_repeat).equals(Options.TRUE)){
 				readList.clear();
 				Links.clear();
 				linksOut.clear();
@@ -272,7 +281,7 @@ public class Session implements Runnable {
 					}
 				}
 			}
-		}while(run && option.getOption(OptionKeys.snatcher_repeat).equals(Options.TRUE));
+		}while(run && option.getOption(snatcher_repeat).equals(Options.TRUE));
 		finish();
 	}
 	private void finish() {
@@ -308,7 +317,7 @@ public class Session implements Runnable {
 			return;
 		}
 		if (Links.containsValue(link)) {
-			if (option.getOption(OptionKeys.download_prependPage).equals(Options.TRUE)) {
+			if (option.getOption(download_prependPage).equals(Options.TRUE)) {
 				// already in link list. see if we need to update the referrer
 				final String key = Links.getKey(link);
 				if (referer.getFile().toLowerCase().startsWith("index."))
@@ -369,7 +378,7 @@ public class Session implements Runnable {
 	}
 	private void saveExternalLinkList(){
 		try {
-			final File linkListf=new File(option.getOption(OptionKeys.snatcher_saveFile)+"-external.html");
+			final File linkListf=new File(option.getOption(snatcher_saveFile)+"-external.html");
 			final FileWriter linkListfw;
 
 			if(!linkListf.exists()){
@@ -400,7 +409,7 @@ public class Session implements Runnable {
 	}
 	private void saveLinkList(){
 		try {
-			final File linkListf=new File(option.getOption(OptionKeys.snatcher_saveFile)+".html");
+			final File linkListf=new File(option.getOption(snatcher_saveFile)+".html");
 			final FileWriter linkListfw;
 
 			if(!linkListf.exists()){

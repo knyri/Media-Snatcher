@@ -28,6 +28,7 @@ import simple.parser.ml.Tag;
 import simple.util.logging.LogFactory;
 
 public final class FurAffinity extends PageParser {
+	private static final OptionPanel optionPanel= new OptionPanel("Fur Affinity", FurAffinity.class.getClassLoader().getResourceAsStream("login_template.xml"));
 	private static final simple.util.logging.Log log=LogFactory.getLogFor(FurAffinity.class);
 	private static boolean loggedin=false;
 	private static final Properties props= new Properties();
@@ -39,6 +40,8 @@ public final class FurAffinity extends PageParser {
 		}catch(IOException e){
 			log.error("Failed to load options", e);
 		}
+		optionPanel.setItemValue("username",props.getProperty("user"));
+		optionPanel.setItemValue("password",props.getProperty("pass"));
 	}
 	public FurAffinity(PageReader preader, Session session) {
 		super(preader, session);
@@ -54,16 +57,18 @@ public final class FurAffinity extends PageParser {
 	}
 
 	@Override
-	public boolean hasOptions() {
-		return false;
+	public boolean hasOptions(){
+		return true;
 	}
 
 	@Override
-	public OptionPanel getOptions() {
-		return null;
+	public OptionPanel getOptions(){
+		return optionPanel;
 	}
 	@Override
 	public boolean saveOptions(){
+		props.setProperty("user",optionPanel.getItemValue("username"));
+		props.setProperty("pass",optionPanel.getItemValue("password"));
 		File f= new File("furaffinity_parser.conf");
 		if(!f.exists()){
 			try{
@@ -170,6 +175,12 @@ public final class FurAffinity extends PageParser {
 			HttpEntity entity = response.getEntity();
 			EntityUtils.consume(entity);
 		}catch(Exception e){log.error("Could not log in",e);}
+	}
+
+	@Override
+	protected void reset(){
+		// TODO Auto-generated method stub
+
 	}
 
 }

@@ -61,4 +61,9 @@ public class Pururin extends PageParser{
 		return true;
 	}
 
+	@Override
+	protected void reset(){
+		// TODO Auto-generated method stub
+
+	}
 }

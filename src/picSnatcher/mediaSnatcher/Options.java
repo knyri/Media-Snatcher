@@ -1,7 +1,49 @@
+// tab width: 2
 /**
  *
  */
 package picSnatcher.mediaSnatcher;
+
+import static picSnatcher.mediaSnatcher.OptionKeys.download_alternateNumbering;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_dateSubfolder;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_ingoreStrings;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_keepDownloadLog;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_ppAsDir;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_prependPage;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_prettyFilenames;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_removeThumbs;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_sameFolder;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_sameFolder_custom;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_sameSite;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_saveExternalUrlList;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_saveLinkList;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_separateByDomain;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_siteFirst;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_usePageDirectory;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_usePageDomain;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_wantStrings;
+import static picSnatcher.mediaSnatcher.OptionKeys.saveVersion;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_alwaysCheckMIME;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_getArchives;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_getAudio;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_getDocuments;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_getMovies;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_getOther;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_getPictures;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_ignore;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_ignoreTitle;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_maxLogs;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_minImgHeight;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_minImgWidth;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_readDeep;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_readDepth;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_repeat;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_sameSite;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_saveFile;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_saveFolder;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_want;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_wantTitle;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_wantedTitles;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -11,7 +53,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
 import java.util.Enumeration;
-import java.util.Properties;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -23,6 +66,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.text.JTextComponent;
 
 import picSnatcher.mediaSnatcher.extension.OptionPanel;
 import simple.gui.AboutWindow;
@@ -44,7 +88,7 @@ public final class Options {
 	private static final Log log = LogFactory.getLogFor(Options.class);
 	static final AboutWindow HELP_WINDOW = new AboutWindow(null, "Help", false);
 	static final String FALSE = "false", TRUE = "true";
-	private static final Properties DEFAULTS = new Properties();
+	private static final EnumProperties DEFAULTS = new EnumProperties();
 	static {
 		final JTextArea help = new JTextArea("Top Text Box: Enter the URL here. If there is an obvious number sequence you can replace the number with ^gal^ for use with the next section.\n" +
 				"Gal Syntax: The number of leading zeros. 0 is one; 00 is two, 000 is three, and so on. You may use any character here.\n" +
@@ -64,52 +108,55 @@ public final class Options {
 		HELP_WINDOW.center();
 		//NOTE: option defaults
 		//Edit to add option!
-		DEFAULTS.setProperty(OptionKeys.download_removeThumbs.name(), TRUE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_getPictures.name(), TRUE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_getMovies.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_getAudio.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_getArchives.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_getDocuments.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_getOther.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_prettyFilenames.name(), TRUE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_readDeep.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_readDepth.name(), "1");
-		DEFAULTS.setProperty(OptionKeys.snatcher_sameSite.name(), TRUE);
-		DEFAULTS.setProperty(OptionKeys.download_sameFolder.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_sameFolder_custom.name(),"");
-		DEFAULTS.setProperty(OptionKeys.download_alternateNumbering.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_prependPage.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_ppAsDir.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_keepDownloadLog.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_dateSubfolder.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_siteFirst.name(), TRUE);
-		DEFAULTS.setProperty(OptionKeys.download_usePageDirectory.name(), FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_ingoreStrings.name(), "");
-		DEFAULTS.setProperty(OptionKeys.download_wantStrings.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_ignore.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_want.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_wantedTitles.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_maxLogs.name(), "5");
-		DEFAULTS.setProperty(OptionKeys.snatcher_saveFolder.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_saveFile.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_alwaysCheckMIME.name(), TRUE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_wantTitle.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_ignoreTitle.name(), "");
-		DEFAULTS.setProperty(OptionKeys.snatcher_repeat.name(),FALSE);
-		DEFAULTS.setProperty(OptionKeys.snatcher_minImgWidth.name(),"0");
-		DEFAULTS.setProperty(OptionKeys.snatcher_minImgHeight.name(),"0");
-		DEFAULTS.setProperty(OptionKeys.saveVersion.name(), "2.0");
-		DEFAULTS.setProperty(OptionKeys.download_saveExternalUrlList.name(),FALSE);
-		DEFAULTS.setProperty(OptionKeys.download_saveLinkList.name(),FALSE);
+		DEFAULTS.setProperty(download_removeThumbs, TRUE);
+		DEFAULTS.setProperty(snatcher_getPictures, TRUE);
+		DEFAULTS.setProperty(snatcher_getMovies, FALSE);
+		DEFAULTS.setProperty(snatcher_getAudio, FALSE);
+		DEFAULTS.setProperty(snatcher_getArchives, FALSE);
+		DEFAULTS.setProperty(snatcher_getDocuments, FALSE);
+		DEFAULTS.setProperty(snatcher_getOther, FALSE);
+		DEFAULTS.setProperty(download_prettyFilenames, TRUE);
+		DEFAULTS.setProperty(snatcher_readDeep, FALSE);
+		DEFAULTS.setProperty(snatcher_readDepth, "1");
+		DEFAULTS.setProperty(snatcher_sameSite, TRUE);
+		DEFAULTS.setProperty(download_sameFolder, FALSE);
+		DEFAULTS.setProperty(download_sameFolder_custom,"");
+		DEFAULTS.setProperty(download_alternateNumbering, FALSE);
+		DEFAULTS.setProperty(download_prependPage, FALSE);
+		DEFAULTS.setProperty(download_ppAsDir, FALSE);
+		DEFAULTS.setProperty(download_keepDownloadLog, FALSE);
+		DEFAULTS.setProperty(download_dateSubfolder, FALSE);
+		DEFAULTS.setProperty(download_siteFirst, TRUE);
+		DEFAULTS.setProperty(download_usePageDirectory, FALSE);
+		DEFAULTS.setProperty(download_ingoreStrings, "");
+		DEFAULTS.setProperty(download_wantStrings, "");
+		DEFAULTS.setProperty(snatcher_ignore, "");
+		DEFAULTS.setProperty(snatcher_want, "");
+		DEFAULTS.setProperty(snatcher_wantedTitles, "");
+		DEFAULTS.setProperty(snatcher_maxLogs, "5");
+		DEFAULTS.setProperty(snatcher_saveFolder, "");
+		DEFAULTS.setProperty(snatcher_saveFile, "");
+		DEFAULTS.setProperty(snatcher_alwaysCheckMIME, TRUE);
+		DEFAULTS.setProperty(snatcher_wantTitle, "");
+		DEFAULTS.setProperty(snatcher_ignoreTitle, "");
+		DEFAULTS.setProperty(snatcher_repeat,FALSE);
+		DEFAULTS.setProperty(snatcher_minImgWidth,"0");
+		DEFAULTS.setProperty(snatcher_minImgHeight,"0");
+		DEFAULTS.setProperty(saveVersion, "2.0");
+		DEFAULTS.setProperty(download_saveExternalUrlList,FALSE);
+		DEFAULTS.setProperty(download_saveLinkList,FALSE);
+		DEFAULTS.setProperty(download_sameSite,FALSE);
+		DEFAULTS.setProperty(download_separateByDomain,FALSE);
+		DEFAULTS.setProperty(download_usePageDomain,FALSE);
 	}
 	private String[] wantedt, ignoredt, ignoredl, wantedl, wantedd, ignoredd;
 
-	private final Properties options = new Properties(DEFAULTS);
+	private final EnumProperties options = new EnumProperties(DEFAULTS);
 	private final JCheckBox
 		remThumbs = new JCheckBox("Attempt removal of thumbnails(may skip wanted files)", true),
 		getPics = new JCheckBox("Download Pictures", true),
-		getMovs = new JCheckBox("Download Movies"),
-		getAudi = new JCheckBox("Download Audio"),
+		getMovies = new JCheckBox("Download Movies"),
+		getAudio = new JCheckBox("Download Audio"),
 		getOther = new JCheckBox("Download Other"),
 		getArchive = new JCheckBox("Download Archives"),
 		getDocument = new JCheckBox("Download Documents"),
@@ -120,12 +167,15 @@ public final class Options {
 		alternateNumbering = new JCheckBox("Numbered File Names"),
 		keepDlLog = new JCheckBox("Keep a log of downloaded files.(Useful for when you rename files from a daily post)"),
 		prependPageName = new JCheckBox("Prepend Page Name. (Useful for image boards)"),
-		prependAsFolder = new JCheckBox("As folder."),
+		prependPageNameAsFolder = new JCheckBox("As folder."),
 		dateSubfolder = new JCheckBox("Separate runs by date."),
 		siteFirst = new JCheckBox("Domain root folder.", true),
 		usePageDirectory = new JCheckBox("Use the page's directory as the save directory."),
 		infiniteSnatch=new JCheckBox("Loop"),
-		saveExternalLinkList=new JCheckBox("Save external link list.");
+		saveExternalLinkList=new JCheckBox("Save external link list."),
+		downloadSameSite=new JCheckBox("Same site"),
+		separateByDomain= new JCheckBox("Domain subfolders"),
+		usePageDomain= new JCheckBox("Use page's domain");
 	private final JTextField ignore = new JTextField(),
 		want = new JTextField(),
 		ignoreDlText = new JTextField(),
@@ -144,8 +194,15 @@ public final class Options {
 	private final SDialog optionsFrame, advOptions;
 	private final Main parent;
 	private final JTabbedPane jtPane;
+	private final List<ActionListener> uiControllers= new LinkedList<>();
+	private final void uiStateUpdated(){
+		for(ActionListener al: uiControllers){
+			al.actionPerformed(null);
+		}
+	}
 	//	private final Session session;
 	public Options(final Main frame, final Session ses) {
+		ActionListener uiController;
 		jtPane = new JTabbedPane();
 		options.putAll(DEFAULTS);
 		//FLOW: create UI
@@ -160,11 +217,11 @@ public final class Options {
 		getPics.setToolTipText("Will download pictures.");
 		page.add(createLine(getPics,0));
 
-		getMovs.setToolTipText("Will download movies. Includes Flash.");
-		page.add(createLine(getMovs,0));
+		getMovies.setToolTipText("Will download movies. Includes Flash.");
+		page.add(createLine(getMovies,0));
 
-		getAudi.setToolTipText("Will download audio files.");
-		page.add(createLine(getAudi,0));
+		getAudio.setToolTipText("Will download audio files.");
+		page.add(createLine(getAudio,0));
 
 		getArchive.setToolTipText("Will download compressed files.(zip, tar, rar, gzip, etc.)");
 		page.add(createLine(getArchive,0));
@@ -175,7 +232,17 @@ public final class Options {
 		getOther.setToolTipText("Will download anything not defined as a picture, audio, or movie file found on pages.");
 		page.add(createLine(getOther,0));
 		jtPane.addTab("Types",new JScrollPane(page));
-//-----------SAVE OPTIONS TAB
+//-----------DOWNLOAD TAB
+		uiController= new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e){
+				prependPageName.setEnabled(!sameFolder.isSelected());
+				prependPageNameAsFolder.setEnabled(prependPageName.isSelected());
+				siteFirst.setEnabled(dateSubfolder.isSelected() && !sameFolder.isSelected());
+				separateByDomain.setEnabled(sameFolder.isSelected());
+			}
+		};
+		uiControllers.add(uiController);
 		page=SJPanel.makeBoxLayoutPanelY();
 		keepDlLog.setToolTipText("Will keep a log of previously dowloaded files. Useful when you've deleted unwanted files from a site that you plan to scan again.");
 		page.add(createLine(keepDlLog,0));
@@ -183,40 +250,41 @@ public final class Options {
 		prettyFilenames.setToolTipText("Will make filenames more readable by removing some HTML escape sequences. (non-displayable characters and those forbidden in filenames will be left escaped)");
 		page.add(createLine(prettyFilenames,0));
 
-		prependPageName.setToolTipText("Will prepend the filename of the page that the file was found on minus the extention.");
-		page.add(createLine(prependPageName,0));
-		prependPageName.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				prependAsFolder.setEnabled(prependPageName.isSelected());
-			}
-		});
+		sameFolder.setToolTipText("Will save all files found to one folder. Works best when combined with alternate numbering.");
+		page.add(createLine(sameFolder,0));
+		sameFolder.addActionListener(uiController);
 
-		prependAsFolder.setToolTipText("If unchecked the pagename will be added to the filename (page_file). If checked it will create a subfolder (path\\page\\file).");
-		page.add(createLine(prependAsFolder,1));
+		separateByDomain.setToolTipText("Separates the files by domain.");
+		page.add(createLine(separateByDomain,1));
 
 		dateSubfolder.setToolTipText("Will create a subfolder with today's date and use that as the root folder under the site.");
 		page.add(createLine(dateSubfolder,0));
-		dateSubfolder.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(final ActionEvent ae) {
-				siteFirst.setEnabled(dateSubfolder.isSelected() && !sameFolder.isSelected());
-			}
-		});
+		dateSubfolder.addActionListener(uiController);
 
 		siteFirst.setToolTipText("Will use the domain as the root and the date will be a subfolder.");
 		page.add(createLine(siteFirst,1));
 
+		usePageDomain.setToolTipText("Uses the page's domain instead of the file's.");
+		page.add(createLine(usePageDomain,0));
+
 		usePageDirectory.setToolTipText("Will use the page's directory to save content found on that page.(combinable with other options)");
 		page.add(createLine(usePageDirectory,0));
+
+		prependPageName.setToolTipText("Will prepend the filename of the page that the file was found on minus the extention.");
+		page.add(createLine(prependPageName,0));
+		prependPageName.addActionListener(uiController);
+
+		prependPageNameAsFolder.setToolTipText("If unchecked the pagename will be added to the filename (page_file). If checked it will create a subfolder (path\\page\\file).");
+		page.add(createLine(prependPageNameAsFolder,1));
 
 		alternateNumbering.setToolTipText("Uses a number scheme to name files. ####_### (pageNum_fileNum). Useful when sites give files non-sense names that throw off order.");
 		page.add(createLine(alternateNumbering,0));
 
-		sameFolder.setToolTipText("Will save all files found to one folder. Works best when combined with alternate numbering.");
-		page.add(createLine(sameFolder,0));
-		jtPane.addTab("Save Options",new JScrollPane(page));
-//-----------DOWNLOAD TAB
+		downloadSameSite.setToolTipText("Will only download the file if the domains match. (e.g. a file found on a page from www.example.com and that is hosted on static.example.com will be downloaded)");
+		page.add(createLine(downloadSameSite,1));
+		jtPane.addTab("Download",new JScrollPane(page));
+
+//-----------CRAWL TAB
 		page=SJPanel.makeBoxLayoutPanelY();
 		infiniteSnatch.setToolTipText("Will start over when done until Stop is pressed or this checkbox is unchecked.");
 		page.add(createLine(infiniteSnatch,0));
@@ -265,7 +333,7 @@ public final class Options {
 
 		ignoreTitle.setToolTipText("Will skip the page if the title contains any of these. If the title matches both an ignore item and a want item, the ignore item wins.");
 		page.add(SJPanel.makeLabeledPanel(ignoreTitle, "Ignore page if title contains(separate with ;):"));
-		jtPane.addTab("Download",new JScrollPane(page));
+		jtPane.addTab("Crawl",new JScrollPane(page));
 //-----------MISC TAB
 		page=SJPanel.makeBoxLayoutPanelY();
 		saveExternalLinkList.setToolTipText("Will save a list of external links found on the pages.");
@@ -280,35 +348,40 @@ public final class Options {
 			@Override
 			public void actionPerformed(final ActionEvent e) {//FLOW: UI to Data
 				//Edit to add option!
-				options.setProperty(OptionKeys.download_saveExternalUrlList.name(), getTF(saveExternalLinkList.isSelected()));
-				options.setProperty(OptionKeys.download_removeThumbs.name(), getTF(remThumbs.isSelected()));
-				options.setProperty(OptionKeys.snatcher_getPictures.name(), getTF(getPics.isSelected()));
-				options.setProperty(OptionKeys.snatcher_getMovies.name(), getTF(getMovs.isSelected()));
-				options.setProperty(OptionKeys.snatcher_getAudio.name(), getTF(getAudi.isSelected()));
-				options.setProperty(OptionKeys.snatcher_getArchives.name(), getTF(getArchive.isSelected()));
-				options.setProperty(OptionKeys.snatcher_getDocuments.name(), getTF(getDocument.isSelected()));
-				options.setProperty(OptionKeys.snatcher_getOther.name(), getTF(getOther.isSelected()));
-				options.setProperty(OptionKeys.download_prettyFilenames.name(), getTF(prettyFilenames.isSelected()));
-				options.setProperty(OptionKeys.snatcher_readDeep.name(), getTF(readDeep.isSelected()));
-				options.setProperty(OptionKeys.snatcher_readDepth.name(), readDepth.getText());
-				options.setProperty(OptionKeys.snatcher_sameSite.name(), getTF(sameSite.isSelected()));
-				options.setProperty(OptionKeys.download_sameFolder.name(), getTF(sameFolder.isSelected()));
-				options.setProperty(OptionKeys.download_alternateNumbering.name(), getTF(alternateNumbering.isSelected()));
-				options.setProperty(OptionKeys.download_keepDownloadLog.name(), getTF(keepDlLog.isSelected()));
-				options.setProperty(OptionKeys.download_prependPage.name(), getTF(prependPageName.isSelected()));
-				options.setProperty(OptionKeys.download_ppAsDir.name(), getTF(prependAsFolder.isSelected()));
-				options.setProperty(OptionKeys.download_dateSubfolder.name(), getTF(dateSubfolder.isSelected()));
-				options.setProperty(OptionKeys.download_siteFirst.name(), getTF(siteFirst.isSelected()));
-				options.setProperty(OptionKeys.download_usePageDirectory.name(), getTF(usePageDirectory.isSelected()));
-				options.setProperty(OptionKeys.snatcher_ignore.name(), ignore.getText());
-				options.setProperty(OptionKeys.snatcher_want.name(), want.getText());
-				options.setProperty(OptionKeys.download_ingoreStrings.name(), ignoreDlText.getText());
-				options.setProperty(OptionKeys.download_wantStrings.name(), wantDlText.getText());
-				options.setProperty(OptionKeys.snatcher_wantTitle.name(), wantTitle.getText());
-				options.setProperty(OptionKeys.snatcher_ignoreTitle.name(), ignoreTitle.getText());
-				options.setProperty(OptionKeys.snatcher_minImgWidth.name(),minImgWidth.getText());
-				options.setProperty(OptionKeys.snatcher_minImgHeight.name(),minImgHeight.getText());
-				options.setProperty(OptionKeys.snatcher_repeat.name(),getTF(infiniteSnatch.isSelected()));
+				options.setProperty(download_removeThumbs, getTF(remThumbs));
+				options.setProperty(download_prettyFilenames, getTF(prettyFilenames));
+				options.setProperty(download_saveExternalUrlList, getTF(saveExternalLinkList));
+				options.setProperty(download_alternateNumbering, getTF(alternateNumbering));
+				options.setProperty(download_keepDownloadLog, getTF(keepDlLog));
+				options.setProperty(download_siteFirst, getTF(siteFirst));
+				options.setProperty(download_ingoreStrings, ignoreDlText.getText());
+				options.setProperty(download_wantStrings, wantDlText.getText());
+				options.setProperty(download_sameSite,getValue(downloadSameSite));
+
+				options.setProperty(download_sameFolder, getTF(sameFolder));
+				options.setProperty(download_prependPage, getTF(prependPageName));
+				options.setProperty(download_ppAsDir, getTF(prependPageNameAsFolder));
+				options.setProperty(download_dateSubfolder, getTF(dateSubfolder));
+				options.setProperty(download_usePageDirectory, getTF(usePageDirectory));
+				options.setProperty(download_separateByDomain,getValue(separateByDomain));
+				options.setProperty(download_usePageDomain, getValue(usePageDomain));
+
+				options.setProperty(snatcher_getPictures, getTF(getPics));
+				options.setProperty(snatcher_getMovies, getTF(getMovies));
+				options.setProperty(snatcher_getAudio, getTF(getAudio));
+				options.setProperty(snatcher_getArchives, getTF(getArchive));
+				options.setProperty(snatcher_getOther, getTF(getOther));
+				options.setProperty(snatcher_getDocuments, getTF(getDocument));
+				options.setProperty(snatcher_readDeep, getTF(readDeep));
+				options.setProperty(snatcher_readDepth, readDepth.getText());
+				options.setProperty(snatcher_sameSite, getTF(sameSite));
+				options.setProperty(snatcher_ignore, ignore.getText());
+				options.setProperty(snatcher_want, want.getText());
+				options.setProperty(snatcher_wantTitle, wantTitle.getText());
+				options.setProperty(snatcher_ignoreTitle, ignoreTitle.getText());
+				options.setProperty(snatcher_minImgWidth,minImgWidth.getText());
+				options.setProperty(snatcher_minImgHeight,minImgHeight.getText());
+				options.setProperty(snatcher_repeat,getTF(infiniteSnatch));
 				updateWanted();
 				optionsFrame.setVisible(false);
 			}
@@ -329,78 +402,85 @@ public final class Options {
 			@Override
 			public void actionPerformed(final ActionEvent e) {//FLOW: UI to Data
 				//Edit to add option!
-				options.setProperty(OptionKeys.snatcher_alwaysCheckMIME.name(), getTF(alwaysCheckMIME.isSelected()));
+				options.setProperty(snatcher_alwaysCheckMIME, getTF(alwaysCheckMIME));
 				//TODO: see below
 				//header log
 				//page title
-				//options.setProperty(OptionKeys.download_wantStrings.name(), wantDlText.getText());
+				//options.setProperty(download_wantStrings, wantDlText.getText());
 				advOptions.setVisible(false);
 			}
 		});
 		advOptions.addBottom(bTmp);
 		advOptions.pack();
 		advOptions.setSize(305, advOptions.getHeight());
+		for(PageParser pp: PageParser.getPageParsers()){
+			if(pp.hasOptions()){
+				this.addPage(pp.getOptions());
+			}
+		}
 	}
 	protected void updateWanted() {
-		if (!options.getProperty(OptionKeys.snatcher_wantTitle.name(), "").isEmpty()) {
+		if (!options.getProperty(snatcher_wantTitle, "").isEmpty()) {
 			//pageTitle.setText(pageTitle.getText().toLowerCase());
-			wantedt = options.getProperty(OptionKeys.snatcher_wantTitle.name(), "").split(";");
+			wantedt = options.getProperty(snatcher_wantTitle, "").split(";");
 		}
 		if (!options.getProperty("snatcher.ingoreTitle", "").isEmpty()) {
 			//pageTitle.setText(pageTitle.getText().toLowerCase());
-			ignoredt = options.getProperty(OptionKeys.snatcher_ignoreTitle.name(), "").split(";");
+			ignoredt = options.getProperty(snatcher_ignoreTitle, "").split(";");
 		}
-		if (!options.getProperty(OptionKeys.snatcher_ignore.name(), "").isEmpty()) {
+		if (!options.getProperty(snatcher_ignore, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
-			ignoredl = options.getProperty(OptionKeys.snatcher_ignore.name(), "").split(";");
+			ignoredl = options.getProperty(snatcher_ignore, "").split(";");
 		}
-		if (!options.getProperty(OptionKeys.snatcher_want.name(), "").isEmpty()) {
+		if (!options.getProperty(snatcher_want, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
-			wantedl = options.getProperty(OptionKeys.snatcher_want.name(), "").split(";");
+			wantedl = options.getProperty(snatcher_want, "").split(";");
 		}
-		if (!options.getProperty(OptionKeys.download_ingoreStrings.name(), "").isEmpty()) {
+		if (!options.getProperty(download_ingoreStrings, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
-			ignoredd = options.getProperty(OptionKeys.download_ingoreStrings.name(), "").split(";");
+			ignoredd = options.getProperty(download_ingoreStrings, "").split(";");
 		}
-		if (!options.getProperty(OptionKeys.download_wantStrings.name(), "").isEmpty()) {
+		if (!options.getProperty(download_wantStrings, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
-			wantedd = options.getProperty(OptionKeys.download_wantStrings.name(), "").split(";");
+			wantedd = options.getProperty(download_wantStrings, "").split(";");
 		}
 	}
 	private void setupOptions() {//FLOW: data to UI
 		//Edit to add option!
-		saveExternalLinkList.setSelected(getTF(options.getProperty(OptionKeys.download_saveExternalUrlList.name(), TRUE)));
-		remThumbs.setSelected(getTF(options.getProperty(OptionKeys.download_removeThumbs.name(), TRUE)));
-		getPics.setSelected(getTF(options.getProperty(OptionKeys.snatcher_getPictures.name(), TRUE)));
-		getMovs.setSelected(getTF(options.getProperty(OptionKeys.snatcher_getMovies.name(), FALSE)));
-		getAudi.setSelected(getTF(options.getProperty(OptionKeys.snatcher_getAudio.name(), FALSE)));
-		getArchive.setSelected(getTF(options.getProperty(OptionKeys.snatcher_getArchives.name(), FALSE)));
-		getDocument.setSelected(getTF(options.getProperty(OptionKeys.snatcher_getDocuments.name(), FALSE)));
-		getOther.setSelected(getTF(options.getProperty(OptionKeys.snatcher_getOther.name(), FALSE)));
-		prettyFilenames.setSelected(getTF(options.getProperty(OptionKeys.download_prettyFilenames.name(), TRUE)));
-		readDeep.setSelected(getTF(options.getProperty(OptionKeys.snatcher_readDeep.name(), FALSE)));
-		readDepth.setText(options.getProperty(OptionKeys.snatcher_readDepth.name(), "1"));
-		sameSite.setSelected(getTF(options.getProperty(OptionKeys.snatcher_sameSite.name(), TRUE)));
-		sameFolder.setSelected(getTF(options.getProperty(OptionKeys.download_sameFolder.name(), FALSE)));
-		alternateNumbering.setSelected(getTF(options.getProperty(OptionKeys.download_alternateNumbering.name(), FALSE)));
-		keepDlLog.setSelected(getTF(options.getProperty(OptionKeys.download_keepDownloadLog.name(), FALSE)));
-		prependPageName.setSelected(getTF(options.getProperty(OptionKeys.download_prependPage.name(), FALSE)));
-		prependAsFolder.setSelected(getTF(options.getProperty(OptionKeys.download_ppAsDir.name(), FALSE)));
-		prependAsFolder.setEnabled(prependPageName.isSelected());
-		usePageDirectory.setSelected(getTF(options.getProperty(OptionKeys.download_usePageDirectory.name())));
-		dateSubfolder.setSelected(getTF(options.getProperty(OptionKeys.download_dateSubfolder.name(), FALSE)));
-		siteFirst.setSelected(getTF(options.getProperty(OptionKeys.download_siteFirst.name(), TRUE)));
-		siteFirst.setEnabled(dateSubfolder.isSelected());
-		minImgWidth.setText(options.getProperty(OptionKeys.snatcher_minImgWidth.name()));
-		minImgHeight.setText(options.getProperty(OptionKeys.snatcher_minImgHeight.name()));
-		infiniteSnatch.setSelected(getTF(options.getProperty(OptionKeys.snatcher_repeat.name())));
+		setValue(saveExternalLinkList,	getOption(download_saveExternalUrlList));
+		setValue(remThumbs,		getOption(download_removeThumbs));
+		setValue(getPics,				getOption(snatcher_getPictures));
+		setValue(getMovies,			getOption(snatcher_getMovies));
+		setValue(getAudio,			getOption(snatcher_getAudio));
+		setValue(getArchive,			getOption(snatcher_getArchives));
+		setValue(getDocument,		getOption(snatcher_getDocuments));
+		setValue(getOther,			getOption(snatcher_getOther));
+		setValue(prettyFilenames,	getOption(download_prettyFilenames));
+		setValue(readDeep,			getOption(snatcher_readDeep));
+		setValue(readDepth,			getOption(snatcher_readDepth));
+		setValue(sameSite,			getOption(snatcher_sameSite));
+		setValue(sameFolder,		getOption(download_sameFolder));
+		setValue(alternateNumbering,	getOption(download_alternateNumbering));
+		setValue(keepDlLog,			getOption(download_keepDownloadLog));
+		setValue(prependPageName,	getOption(download_prependPage));
+		setValue(prependPageNameAsFolder,	getOption(download_ppAsDir));
+		setValue(usePageDirectory,	getOption(download_usePageDirectory));
+		setValue(dateSubfolder,		getOption(download_dateSubfolder));
+		setValue(siteFirst,				getOption(download_siteFirst));
+		setValue(minImgWidth,		getOption(snatcher_minImgWidth));
+		setValue(minImgHeight,		getOption(snatcher_minImgHeight));
+		setValue(infiniteSnatch,		getOption(snatcher_repeat));
+		setValue(usePageDomain,	getOption(download_usePageDomain));
+		setValue(ignore,				getOption(snatcher_ignore));
+		setValue(want,					getOption(snatcher_want));
+		setValue(ignoreDlText,		getOption(download_ingoreStrings));
+		setValue(wantDlText,			getOption(download_wantStrings));
+		setValue(wantTitle,			getOption(snatcher_wantTitle));
+		setValue(ignoreTitle,			getOption(snatcher_ignoreTitle));
+		setValue(downloadSameSite,	getOption(download_sameSite));
+		setValue(separateByDomain,	getOption(download_separateByDomain));
 
-		ignore.setText(options.getProperty(OptionKeys.snatcher_ignore.name(), ""));
-		want.setText(options.getProperty(OptionKeys.snatcher_want.name(), ""));
-		ignoreDlText.setText(options.getProperty(OptionKeys.download_ingoreStrings.name(), ""));
-		wantDlText.setText(options.getProperty(OptionKeys.download_wantStrings.name(), ""));
-		wantTitle.setText(options.getProperty(OptionKeys.snatcher_wantTitle.name(), ""));
-		ignoreTitle.setText(options.getProperty(OptionKeys.snatcher_ignoreTitle.name(), ""));
+		uiStateUpdated();
 	}
 	protected void showOptions() {
 		setupOptions();
@@ -408,16 +488,16 @@ public final class Options {
 		optionsFrame.setVisible(true);
 	}
 	private void setupAdvOptions() {
-		alwaysCheckMIME.setSelected(getTF(options.getProperty(OptionKeys.snatcher_alwaysCheckMIME.name())));
-		pageTitle.setText(options.getProperty(OptionKeys.snatcher_wantedTitles.name(), ""));
+		alwaysCheckMIME.setSelected(getTF(options.getProperty(snatcher_alwaysCheckMIME)));
+		pageTitle.setText(options.getProperty(snatcher_wantedTitles, ""));
 	}
 	protected void showAdvOptions() {
 		setupAdvOptions();
 		advOptions.center();
 		advOptions.setVisible(true);
 	}
-	public void addPage(OptionPanel panel, String title){
-		jtPane.add(title, new JScrollPane(panel.getPanel()));
+	public void addPage(OptionPanel panel){
+		jtPane.add(panel.getTitle(), new JScrollPane(panel.getPanel()));
 	}
 	protected void savePref() {
 		savePref("pref");
@@ -443,91 +523,55 @@ public final class Options {
 			}
 			return;
 		}
-		try {
-			final FileReader in = new FileReader(pref);
-			Properties tmp=new Properties();
+		try(FileReader in = new FileReader(pref)) {
+			EnumProperties tmp=new EnumProperties();
 			tmp.load(in);
-			if(tmp.getProperty(OptionKeys.saveVersion.name(),null)==null){
-				final Properties nprop = new Properties();
+			if(tmp.getProperty(saveVersion,null)==null){
+				final EnumProperties nprop = new EnumProperties();
 				//Update old options to new
-				nprop.setProperty(OptionKeys.download_removeThumbs.name(), getTF(TRUE.equals(tmp.getProperty("download.removeThumbs"))));
-				nprop.setProperty(OptionKeys.snatcher_getPictures.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.getPictures"))));
-				nprop.setProperty(OptionKeys.snatcher_getMovies.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.getMovies"))));
-				nprop.setProperty(OptionKeys.snatcher_getAudio.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.getAudio"))));
-				nprop.setProperty(OptionKeys.snatcher_getArchives.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.getArchives"))));
-				nprop.setProperty(OptionKeys.snatcher_getDocuments.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.getDocuments"))));
-				nprop.setProperty(OptionKeys.snatcher_getOther.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.getOther"))));
-				nprop.setProperty(OptionKeys.download_prettyFilenames.name(), getTF(TRUE.equals(tmp.getProperty("download.prettyFilenames"))));
-				nprop.setProperty(OptionKeys.snatcher_readDeep.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.readDeep"))));
-				nprop.setProperty(OptionKeys.snatcher_sameSite.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.sameSite"))));
-				nprop.setProperty(OptionKeys.download_sameFolder.name(), getTF(TRUE.equals(tmp.getProperty("download.sameFolder"))));
-				nprop.setProperty(OptionKeys.download_alternateNumbering.name(), getTF(TRUE.equals(tmp.getProperty("download.alternateNumbering"))));
-				nprop.setProperty(OptionKeys.download_keepDownloadLog.name(), getTF(TRUE.equals(tmp.getProperty("download.keepDownloadLog"))));
-				nprop.setProperty(OptionKeys.download_prependPage.name(), getTF(TRUE.equals(tmp.getProperty("download.prependPage"))));
-				nprop.setProperty(OptionKeys.download_ppAsDir.name(), getTF(TRUE.equals(tmp.getProperty("download.ppAsDir"))));
-				nprop.setProperty(OptionKeys.download_dateSubfolder.name(), getTF(TRUE.equals(tmp.getProperty("download.dateSubfolder"))));
-				nprop.setProperty(OptionKeys.download_siteFirst.name(), getTF(TRUE.equals(tmp.getProperty("download.siteFirst"))));
-				nprop.setProperty(OptionKeys.download_usePageDirectory.name(), getTF(TRUE.equals(tmp.getProperty("download.usePageDirectory"))));
-				nprop.setProperty(OptionKeys.snatcher_repeat.name(), getTF(TRUE.equals(tmp.getProperty("snatcher.repeat"))));
+				nprop.setProperty(download_removeThumbs, getTF(TRUE.equals(tmp.getProperty("download.removeThumbs"))));
+				nprop.setProperty(snatcher_getPictures, getTF(TRUE.equals(tmp.getProperty("snatcher.getPictures"))));
+				nprop.setProperty(snatcher_getMovies, getTF(TRUE.equals(tmp.getProperty("snatcher.getMovies"))));
+				nprop.setProperty(snatcher_getAudio, getTF(TRUE.equals(tmp.getProperty("snatcher.getAudio"))));
+				nprop.setProperty(snatcher_getArchives, getTF(TRUE.equals(tmp.getProperty("snatcher.getArchives"))));
+				nprop.setProperty(snatcher_getDocuments, getTF(TRUE.equals(tmp.getProperty("snatcher.getDocuments"))));
+				nprop.setProperty(snatcher_getOther, getTF(TRUE.equals(tmp.getProperty("snatcher.getOther"))));
+				nprop.setProperty(download_prettyFilenames, getTF(TRUE.equals(tmp.getProperty("download.prettyFilenames"))));
+				nprop.setProperty(snatcher_readDeep, getTF(TRUE.equals(tmp.getProperty("snatcher.readDeep"))));
+				nprop.setProperty(snatcher_sameSite, getTF(TRUE.equals(tmp.getProperty("snatcher.sameSite"))));
+				nprop.setProperty(download_sameFolder, getTF(TRUE.equals(tmp.getProperty("download.sameFolder"))));
+				nprop.setProperty(download_alternateNumbering, getTF(TRUE.equals(tmp.getProperty("download.alternateNumbering"))));
+				nprop.setProperty(download_keepDownloadLog, getTF(TRUE.equals(tmp.getProperty("download.keepDownloadLog"))));
+				nprop.setProperty(download_prependPage, getTF(TRUE.equals(tmp.getProperty("download.prependPage"))));
+				nprop.setProperty(download_ppAsDir, getTF(TRUE.equals(tmp.getProperty("download.ppAsDir"))));
+				nprop.setProperty(download_dateSubfolder, getTF(TRUE.equals(tmp.getProperty("download.dateSubfolder"))));
+				nprop.setProperty(download_siteFirst, getTF(TRUE.equals(tmp.getProperty("download.siteFirst"))));
+				nprop.setProperty(download_usePageDirectory, getTF(TRUE.equals(tmp.getProperty("download.usePageDirectory"))));
+				nprop.setProperty(snatcher_repeat, getTF(TRUE.equals(tmp.getProperty("snatcher.repeat"))));
 
-				nprop.setProperty(OptionKeys.snatcher_readDepth.name(), tmp.getProperty("snatcher.readDepth"));
-				nprop.setProperty(OptionKeys.download_ingoreStrings.name(), tmp.getProperty("download.ignore"));
-				nprop.setProperty(OptionKeys.download_wantStrings.name(), tmp.getProperty("download.want"));
-				nprop.setProperty(OptionKeys.snatcher_ignore.name(), tmp.getProperty("snatcher.ignore"));
-				nprop.setProperty(OptionKeys.snatcher_want.name(), tmp.getProperty("snatcher.want"));
-				nprop.setProperty(OptionKeys.snatcher_wantedTitles.name(), tmp.getProperty("snatcher.wantedTitles"));
-				nprop.setProperty(OptionKeys.snatcher_maxLogs.name(), tmp.getProperty("snatcher.maxLogs"));
-				nprop.setProperty(OptionKeys.snatcher_saveFolder.name(), tmp.getProperty("snatcher.saveFolder"));
-				nprop.setProperty(OptionKeys.snatcher_saveFile.name(), tmp.getProperty("snatcher.saveFile"));
-				nprop.setProperty(OptionKeys.snatcher_wantTitle.name(), tmp.getProperty("snatcher.wantTitle"));
-				nprop.setProperty(OptionKeys.snatcher_ignoreTitle.name(), tmp.getProperty("snatcher.ignoreTitle"));
-				nprop.setProperty(OptionKeys.snatcher_minImgWidth.name(), tmp.getProperty("snatcher.minImgWidth"));
-				nprop.setProperty(OptionKeys.snatcher_minImgHeight.name(), tmp.getProperty("snatcher.minImgHeight"));
-				nprop.setProperty(OptionKeys.saveVersion.name(), "2.0");
+				nprop.setProperty(snatcher_readDepth, tmp.getProperty("snatcher.readDepth"));
+				nprop.setProperty(download_ingoreStrings, tmp.getProperty("download.ignore"));
+				nprop.setProperty(download_wantStrings, tmp.getProperty("download.want"));
+				nprop.setProperty(snatcher_ignore, tmp.getProperty("snatcher.ignore"));
+				nprop.setProperty(snatcher_want, tmp.getProperty("snatcher.want"));
+				nprop.setProperty(snatcher_wantedTitles, tmp.getProperty("snatcher.wantedTitles"));
+				nprop.setProperty(snatcher_maxLogs, tmp.getProperty("snatcher.maxLogs"));
+				nprop.setProperty(snatcher_saveFolder, tmp.getProperty("snatcher.saveFolder"));
+				nprop.setProperty(snatcher_saveFile, tmp.getProperty("snatcher.saveFile"));
+				nprop.setProperty(snatcher_wantTitle, tmp.getProperty("snatcher.wantTitle"));
+				nprop.setProperty(snatcher_ignoreTitle, tmp.getProperty("snatcher.ignoreTitle"));
+				nprop.setProperty(snatcher_minImgWidth, tmp.getProperty("snatcher.minImgWidth"));
+				nprop.setProperty(snatcher_minImgHeight, tmp.getProperty("snatcher.minImgHeight"));
+				nprop.setProperty(saveVersion, "2.0");
 				tmp.clear();
 				tmp.putAll(nprop);
 			}
 			options.putAll(tmp);
-			//set all true/false to the constants
-			//Edit to add option True-False!
-			options.setProperty(OptionKeys.download_saveExternalUrlList.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_saveExternalUrlList.name()))));
-			options.setProperty(OptionKeys.download_removeThumbs.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_removeThumbs.name()))));
-			options.setProperty(OptionKeys.snatcher_getPictures.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_getPictures.name()))));
-			options.setProperty(OptionKeys.snatcher_getMovies.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_getMovies.name()))));
-			options.setProperty(OptionKeys.snatcher_getAudio.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_getAudio.name()))));
-			options.setProperty(OptionKeys.snatcher_getArchives.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_getArchives.name()))));
-			options.setProperty(OptionKeys.snatcher_getDocuments.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_getDocuments.name()))));
-			options.setProperty(OptionKeys.snatcher_getOther.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_getOther.name()))));
-			options.setProperty(OptionKeys.download_prettyFilenames.name(), getTF(TRUE.equals(options.getProperty("snatcher.prettyFilenames"))));
-			options.setProperty(OptionKeys.snatcher_readDeep.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_readDeep.name()))));
-			options.setProperty(OptionKeys.snatcher_sameSite.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_sameSite.name()))));
-			options.setProperty(OptionKeys.download_sameFolder.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_sameFolder.name()))));
-			options.setProperty(OptionKeys.download_alternateNumbering.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_alternateNumbering.name()))));
-			options.setProperty(OptionKeys.download_keepDownloadLog.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_keepDownloadLog.name()))));
-			options.setProperty(OptionKeys.download_prependPage.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_prependPage.name()))));
-			options.setProperty(OptionKeys.download_ppAsDir.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_ppAsDir.name()))));
-			options.setProperty(OptionKeys.download_dateSubfolder.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_dateSubfolder.name()))));
-			options.setProperty(OptionKeys.download_siteFirst.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_siteFirst.name()))));
-			options.setProperty(OptionKeys.download_usePageDirectory.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.download_usePageDirectory.name()))));
-			options.setProperty(OptionKeys.snatcher_repeat.name(), getTF(TRUE.equals(options.getProperty(OptionKeys.snatcher_repeat.name()))));
-			FileUtil.close(in);
 		} catch (final Exception e) {
 			log.error("loadPreferences", e);
 		} finally {
 			updateWanted();
 		}
-	}
-	public static final String getTF(final boolean test) {
-		if (test)
-			return TRUE;
-		else
-			return FALSE;
-	}
-	public static final boolean getTF(final String test) {
-		if (TRUE.equalsIgnoreCase(test))
-			return true;
-		else
-			return false;
 	}
 	private static final String[] thumbs = new String[] {"thumbnail","sample","-thumb","thumb_","thumb-","_thumb","/thumb","/mini","_tn","tn_", "preview", "_small", "/small", "small_","_icon", "ico_","icon_","/icon"};
 	public boolean isThumb(String link) {
@@ -640,7 +684,7 @@ public final class Options {
 		// XXX: Checking mime
 		String mime = MimeTypes.getMime(link).get(0);
 		if (!mime.equals("")) {
-			if (getOption(OptionKeys.snatcher_alwaysCheckMIME)==TRUE) {
+			if (getOption(snatcher_alwaysCheckMIME)==TRUE) {
 				try {
 					mime = MimeTypes.getMimeType(link, ref.getOriginalUri());
 				} catch (final Exception e) {
@@ -736,7 +780,7 @@ public final class Options {
 	 * @return true if the domains match, referral==null, or sameSite()==false
 	 */
 	private boolean sameSiteCheck(final Uri link, final Uri ref) {
-		if (sameSite() && ref != null) {
+		if (getTF(getOption(snatcher_sameSite)) && ref != null) {
 			if (!link.getDomain().equalsIgnoreCase(ref.getDomain())) {
 				log.debug("same site check","mismatch domains: link["+link+"] -- referrer["+ref.getDomain()+"]");
 				return false;
@@ -746,68 +790,55 @@ public final class Options {
 		return true;
 	}
 	public boolean isWantedMIME(final String mime) {
-		return (getPics()&&MimeTypes.isMimeImage(mime)) ||
-		(getMovie()&&MimeTypes.isMimeVideo(mime)) ||
-		(getAudio()&&MimeTypes.isMimeAudio(mime)) ||
-		(getArchive()&&MimeTypes.isMimeArchive(mime)) ||
-		(getDocument()&&MimeTypes.isMimeDocument(mime)) ||
-		(getOther()&&MimeTypes.isMimeOther(mime));
-	}
-	/*
-	 */
-	/**
-	 * @return the alternateNumbering
-	 */
-	protected final boolean alternateNumbering() {
-		return getTF(options.getProperty(OptionKeys.download_alternateNumbering.name(), FALSE));
+		return
+			(getPics()				&& MimeTypes.isMimeImage(mime)) ||
+			(getMovie()			&& MimeTypes.isMimeVideo(mime)) ||
+			(getAudio()			&& MimeTypes.isMimeAudio(mime)) ||
+			(getArchive()			&& MimeTypes.isMimeArchive(mime)) ||
+			(getDocument()	&& MimeTypes.isMimeDocument(mime)) ||
+			(getOther()			&& MimeTypes.isMimeOther(mime));
 	}
 	/**
 	 * @return the deepScan
 	 */
 	protected final boolean deepScan() {
-		return getTF(options.getProperty(OptionKeys.snatcher_readDeep.name(), FALSE));
+		return getTF(options.getProperty(snatcher_readDeep, FALSE));
 	}
 	/**
 	 * @return the getAudi
 	 */
 	protected final boolean getAudio() {
-		return getTF(options.getProperty(OptionKeys.snatcher_getAudio.name(), FALSE));
+		return getTF(options.getProperty(snatcher_getAudio, FALSE));
 	}
 	/**
 	 * @return the getMovs
 	 */
 	protected final boolean getMovie() {
-		return getTF(options.getProperty(OptionKeys.snatcher_getMovies.name(), FALSE));
+		return getTF(options.getProperty(snatcher_getMovies, FALSE));
 	}
 	/**
 	 * @return the getOther
 	 */
 	protected final boolean getOther() {
-		return getTF(options.getProperty(OptionKeys.snatcher_getOther.name(), FALSE));
+		return getTF(options.getProperty(snatcher_getOther, FALSE));
 	}
 	/**
 	 * @return the getArchive
 	 */
 	protected final boolean getArchive() {
-		return getTF(options.getProperty(OptionKeys.snatcher_getArchives.name(), FALSE));
+		return getTF(options.getProperty(snatcher_getArchives, FALSE));
 	}
 	/**
 	 * @return the getDocument
 	 */
 	protected final boolean getDocument() {
-		return getTF(options.getProperty(OptionKeys.snatcher_getDocuments.name(), FALSE));
+		return getTF(options.getProperty(snatcher_getDocuments, FALSE));
 	}
 	/**
 	 * @return the getPics
 	 */
 	protected final boolean getPics() {
-		return getTF(options.getProperty(OptionKeys.snatcher_getPictures.name(), TRUE));
-	}
-	/**
-	 * @return the keepDlLog
-	 */
-	protected final boolean keepDlLog() {
-		return getTF(options.getProperty(OptionKeys.download_keepDownloadLog.name(), FALSE));
+		return getTF(options.getProperty(snatcher_getPictures, TRUE));
 	}
 	/**
 	 * @return the keepHeaderLog
@@ -819,41 +850,23 @@ public final class Options {
 	 * @return the readDepth
 	 */
 	protected final int getReadDepth() {
-		return Integer.parseInt(options.getProperty(OptionKeys.snatcher_readDepth.name(), "1"));
-	}
-	/**
-	 * @return the remThumbs
-	 */
-	protected final boolean remThumbs() {
-		return getTF(options.getProperty(OptionKeys.download_removeThumbs.name(), TRUE));
-	}
-	/**
-	 * @return the sameFolder
-	 */
-	protected final boolean sameFolder() {
-		return getTF(options.getProperty(OptionKeys.download_sameFolder.name(), FALSE));
-	}
-	/**
-	 * @return the sameSite
-	 */
-	protected final boolean sameSite() {
-		return getTF(options.getProperty(OptionKeys.snatcher_sameSite.name(), TRUE));
-	}
-	protected final boolean prettyFilenames() {
-		return getTF(options.getProperty(OptionKeys.download_prettyFilenames.name(), TRUE));
+		return Integer.parseInt(options.getProperty(snatcher_readDepth, "1"));
 	}
 	protected final String getIgnoreList() {
-		return options.getProperty(OptionKeys.snatcher_ignore.name(), "");
+		return options.getProperty(snatcher_ignore, "");
 	}
 	protected final String getTitleList() {
-		return options.getProperty(OptionKeys.snatcher_wantedTitles.name(), "");
+		return options.getProperty(snatcher_wantedTitles, "");
 	}
 	protected final void setOption(final OptionKeys option, final String value) {
-		//log.information(option.name(), value);
-		options.setProperty(option.name(), value);
+		//log.information(option, value);
+		options.setProperty(option, value);
 	}
 	public final String getOption(final OptionKeys option) {
-		return options.getProperty(option.name());
+		return options.getProperty(option);
+	}
+	public final boolean getBoolean(OptionKeys option){
+		return getTF(options.getProperty(option));
 	}
 	protected final Enumeration<Object> getOptions() {
 		return options.keys();
@@ -861,11 +874,52 @@ public final class Options {
 	public void dumpOptions() {
 		log.information(options);
 	}
+// ----------------------------------------------
+// --------------UTILITY------------------------
+// ----------------------------------------------
 	private static Box createLine(JComponent comp,int indent){
 		Box box=Box.createHorizontalBox();
 		if(indent>0)box.add(Box.createHorizontalStrut(25*indent));
 		box.add(comp);
 		box.add(Box.createGlue());
 		return box;
+	}
+	private static final void setValue(JComponent c, String v){
+		if(c instanceof JTextComponent){
+			((JTextComponent)c).setText(v);
+		}
+		if(c instanceof JCheckBox){
+			((JCheckBox)c).setSelected(getTF(v));
+		}
+	}
+	private static final String getValue(JComponent c){
+		if(c instanceof JTextComponent){
+			return ((JTextComponent)c).getText();
+		}
+		if(c instanceof JCheckBox){
+			return getTF(((JCheckBox)c).isSelected());
+		}
+		return c.toString();
+	}
+	private static final String getTF(JCheckBox box){
+		return getTF(box.isSelected());
+	}
+	public static final String getTF(final boolean test) {
+		if (test)
+			return TRUE;
+		else
+			return FALSE;
+	}
+	public static final boolean getTF(final String test) {
+		if(test == TRUE){
+			return true;
+		}
+		if(test == FALSE){
+			return false;
+		}
+		if (TRUE.equalsIgnoreCase(test))
+			return true;
+		else
+			return false;
 	}
 }

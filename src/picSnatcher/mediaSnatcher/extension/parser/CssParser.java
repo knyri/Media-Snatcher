@@ -37,4 +37,9 @@ public class CssParser extends PageParser{
 		return false;
 	}
 
+	@Override
+	protected void reset(){
+		// TODO Auto-generated method stub
+
+	}
 }

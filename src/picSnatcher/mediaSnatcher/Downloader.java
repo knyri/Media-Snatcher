@@ -2,6 +2,17 @@
  *
  */
 package picSnatcher.mediaSnatcher;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_alternateNumbering;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_dateSubfolder;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_ppAsDir;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_prependPage;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_prettyFilenames;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_sameFolder;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_separateByDomain;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_siteFirst;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_usePageDirectory;
+import static picSnatcher.mediaSnatcher.OptionKeys.download_usePageDomain;
+import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_saveFile;
 
 import java.io.EOFException;
 import java.io.File;
@@ -464,7 +475,7 @@ public class Downloader implements Runnable {
 	private String createFileName(final Uri file, final String referer, final HttpResponse cc) throws IOException {
 		final Options option = session.getOptions();
 		String Stmp;
-		String fPath;
+		String fPath= "";
 		String fName = file.getFile();
 		String ext = null;
 		int index = 0;
@@ -473,96 +484,62 @@ public class Downloader implements Runnable {
 		 * FLOW: start file path creation
 		 */
 		final Uri ref = new Uri(referer);
-		fPath = file.getDomain();// set base folder
-		if (option.getOption(OptionKeys.download_dateSubfolder).equals(Options.TRUE)) {//separating by date
-			if (option.sameFolder()) {
-				fPath += File.separator+LogFactory.getDateStamp()+File.separator;
-			} else {
-				if (option.getOption(OptionKeys.download_siteFirst).equals(Options.TRUE)) {//date is a sub-folder of the domain
-					//prepend page name(if set)
-					if (option.getOption(OptionKeys.download_prependPage).equals(Options.TRUE) && referer != null) {
-						//get the referring page name
-						index = ref.getFile().lastIndexOf('.');
-						if (index==-1) {
-							Stmp = ref.getFile();
-						} else {
-							Stmp = ref.getFile().substring(0, index);
-						}
-						//using the referring page path or the file's path
-						if (option.getOption(OptionKeys.download_usePageDirectory).equals(Options.TRUE)) {//page dir/page/date/file
-							fPath += ref.getPath();
-						} else {
-							fPath += file.getPath();
-						}
-						//is the referring page's name a sub-dir or prepended to file name
-						if (option.getOption(OptionKeys.download_ppAsDir).equals(Options.TRUE)) {
-							fPath += LogFactory.getDateStamp()+File.separator+Stmp+File.separator;
-						} else {//page dir/date/file
-							fPath += LogFactory.getDateStamp()+File.separator+Stmp+"_";
-						}
-					} else {//page dir/date/
-						if (option.getOption(OptionKeys.download_usePageDirectory).equals(Options.TRUE)) {
-							fPath += ref.getPath()+LogFactory.getDateStamp();
-						} else {
-							fPath += file.getPath()+LogFactory.getDateStamp();
-						}
-					}
-				} else {//date is base folder
-					//prepend page name(if set)
-					if (option.getOption(OptionKeys.download_prependPage).equals(Options.TRUE) && referer != null) {
-						index = ref.getFile().lastIndexOf('.');
-						if (index==-1) {
-							Stmp = ref.getFile();
-						} else {
-							Stmp = ref.getFile().substring(0, index);
-						}
+		String domain;
+		if(option.getBoolean(download_usePageDomain)){
+			domain= ref.getDomain();
+		}else{
+			domain= file.getDomain();
+		}
+		if(option.getBoolean(download_sameFolder)){
+			// use the save file as the root folder
+			fPath= option.getOption(snatcher_saveFile);
+			if(fPath == null || fPath.isEmpty()){
+				fPath= "snatcher" + File.separatorChar;
+			}else{
+				fPath= fPath.substring(fPath.lastIndexOf(File.separatorChar)+1,fPath.length() - 4) + File.separatorChar;
+			}
+			if(option.getBoolean(download_separateByDomain)){
+				fPath+= domain + File.separatorChar;
+			}
+		}else{
+			if(option.getBoolean(download_separateByDomain)){
+				fPath+= domain + File.separatorChar;
+			}
+		}
 
-						if (option.getOption(OptionKeys.download_ppAsDir).equals(Options.TRUE)) {
-							if (option.getOption(OptionKeys.download_usePageDirectory).equals(Options.TRUE)) {//page dir/date/page/file
-								fPath += LogFactory.getDateStamp()+ref.getPath()+File.separator;
-							} else {
-								fPath += LogFactory.getDateStamp()+file.getPath()+File.separator;
-							}
-							fPath += Stmp+File.separatorChar;
-						} else {//date/file
-							if (option.getOption(OptionKeys.download_usePageDirectory).equals(Options.TRUE)) {
-								fPath += LogFactory.getDateStamp()+ref.getPath();
-							} else {
-								fPath += LogFactory.getDateStamp()+file.getPath();
-							}
-							fPath += Stmp+"_";
-						}
-					} else {//date/page dir/
-						if (option.getOption(OptionKeys.download_usePageDirectory).equals(Options.TRUE)) {
-							fPath += LogFactory.getDateStamp()+ref.getPath();
-						} else {
-							fPath += LogFactory.getDateStamp()+file.getPath();
-						}
-					}
+		if(option.getBoolean(download_dateSubfolder)){
+			if(option.getBoolean(download_siteFirst)){
+				// domain/date
+				fPath += domain + File.separatorChar + LogFactory.getDateStamp() + File.separatorChar;
+			}else{
+				// date
+				fPath += LogFactory.getDateStamp() + File.separatorChar;
+				if(!option.getBoolean(download_sameFolder)){
+					// date/domain
+					fPath+= domain + File.separatorChar;
 				}
 			}
-		} else if (option.sameFolder()) {
-			fPath += File.separator;
-		} else {//not using the date to separate this session
-			if (option.getOption(OptionKeys.download_usePageDirectory).equals(Options.TRUE)) {
-				fPath += ref.getPath();
-			} else {
-				fPath += file.getPath();
-			}
-			//prepend page name(if set)
-			if (option.getOption(OptionKeys.download_prependPage).equals(Options.TRUE) && referer != null) {
-				index = ref.getFile().lastIndexOf('.');
-				if (index==-1) {
-					Stmp = ref.getFile();
-				} else {
-					Stmp = ref.getFile().substring(0, index);
-				}
+		}
 
-				if (option.getOption(OptionKeys.download_ppAsDir).equals(Options.TRUE)) {
-					fPath += Stmp+File.separatorChar;
-				} else {
-					fPath += Stmp+"_";
-				}
+		if(!option.getBoolean(download_sameFolder)){
+			if (option.getBoolean(download_usePageDirectory)) {
+				fPath += ref.getPath().substring(1).replace('/',File.separatorChar);
+			} else {
+				fPath += file.getPath().substring(1).replace('/',File.separatorChar);
+			}
+		}
+
+		if(option.getBoolean(download_prependPage)){
+			index = ref.getFile().lastIndexOf('.');
+			if (index==-1) {
+				fPath+= ref.getFile();
+			} else {
+				fPath+= ref.getFile().substring(0, index);
+			}
+			if(option.getBoolean(download_ppAsDir)){
+				fPath+= File.separatorChar;
+			}else{
+				fPath+= '_';
 			}
 		}
 
@@ -601,7 +578,7 @@ public class Downloader implements Runnable {
 		}
 		if (new File(fPath+fName).exists())
 			return Downloader.CEXIST;
-		if (option.alternateNumbering()) {//alternate numbering scheme
+		if (option.getBoolean(download_alternateNumbering)) {//alternate numbering scheme
 			fName = do_str.padLeft(4, '0', Integer.toString(entryNum)) + "_" +
 					do_str.padLeft(3, '0', Integer.toString(fileNum))+ext;
 		}
@@ -651,7 +628,7 @@ public class Downloader implements Runnable {
 		/*
 		 * Make the filename pretty if set.
 		 */
-		if (option.prettyFilenames()) {
+		if (option.getBoolean(download_prettyFilenames)) {
 			final StringBuilder resolved=new StringBuilder(fName.length());
 			int lend=0;
 			for(int i=0;i<fName.length();i++){

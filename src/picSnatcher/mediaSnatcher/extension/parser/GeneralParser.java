@@ -133,4 +133,9 @@ public class GeneralParser extends PageParser{
 	@Override
 	public boolean saveOptions(){return true;}
 
+	@Override
+	protected void reset(){
+		// TODO Auto-generated method stub
+
+	}
 }

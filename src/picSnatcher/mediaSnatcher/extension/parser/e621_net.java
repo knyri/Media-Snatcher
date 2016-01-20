@@ -29,17 +29,8 @@ public class e621_net extends PageParser{
 	private static final OptionPanel optionPanel= new OptionPanel("e621.net", e621_net.class.getClassLoader().getResourceAsStream("e621_netOptions.xml"));
 	private final List<WantedFilter> wanted= new ArrayList<>();
 	private final List<IgnoreFilter> ignored= new ArrayList<>();
-	private static volatile boolean optionsAdded= false;
 	public e621_net(final PageReader preader,final Session session){
 		super(preader,session);
-		if(session == null){
-			return;
-		}
-		if(!optionsAdded){
-			// not threaded so don't need fancy logic here
-			optionsAdded= true;
-			session.getOptions().addPage(optionPanel,"e621.net");
-		}
 		String text= optionPanel.getItemValue("wanted");
 		for(String row: text.split("\n")){
 			wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
@@ -61,7 +52,7 @@ public class e621_net extends PageParser{
 
 	@Override
 	public boolean canHandle(Uri link,Page page,String mime){
-		return "e621.net".equalsIgnoreCase(link.getHost());
+		return "e621.net".equalsIgnoreCase(link.getDomain());
 	}
 
 	@Override
@@ -250,5 +241,10 @@ public class e621_net extends PageParser{
 			log.debug("ignored", tags);
 			return true;
 		}
+	}
+	@Override
+	protected void reset(){
+		// TODO Auto-generated method stub
+
 	}
 }

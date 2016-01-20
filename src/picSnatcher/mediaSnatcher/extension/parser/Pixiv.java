@@ -118,4 +118,10 @@ public class Pixiv extends PageParser {
 			EntityUtils.consume(entity);
 		}catch(Exception e){log.error("Could not log in",e);}
 	}
+
+	@Override
+	protected void reset(){
+		// TODO Auto-generated method stub
+
+	}
 }

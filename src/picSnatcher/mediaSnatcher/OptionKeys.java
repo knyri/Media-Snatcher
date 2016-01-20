@@ -49,6 +49,9 @@ public enum OptionKeys {
 	 * directory as the page.
 	 */
 	download_usePageDirectory,
+	download_usePageDomain,
+	download_sameSite,
+	download_separateByDomain,
 	download_ingoreStrings,
 	download_wantStrings,
 	snatcher_getPictures,
