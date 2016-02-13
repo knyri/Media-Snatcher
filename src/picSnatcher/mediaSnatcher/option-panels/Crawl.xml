@@ -1,0 +1,28 @@
+<OptionPanel>
+	<check name="snatcher_repeat" label="Loop" tooltip="Will start over when done until Stop is pressed or this checkbox is unchecked." />
+	<check name="snatcher_readDeep" label="Follow links to other pages" />
+	<text name="snatcher_readDepth" label="Depth:" value="1" indent="1" />
+	<check name="snatcher_sameSite" label="Only if domains match" indent="1" />
+	<text name="snatcher_minImgHeight" label="Minimum image height" tooltip="Images with a defined height below this are ignored" value="0" />
+	<text name="snatcher_minImgWidth" label="Minimum image width" tooltip="Images with a defined width below this are ignored" value="0"/>
+	<text name="snatcher_ignore" label="Do not read URLs containing(separate with ;):" tooltip="Will skip pages with one of the following in it's URL. (leave blank to disable)" />
+	<text name="snatcher_want" label="Read URLs containing(separate with ;):" tooltip="Reads only pages with these in the URL. If the page matches both a skip rule and a read rule, the skip rule wins." />
+	<text name="download_ingoreStrings" label="Do not download URLs containing(separate with ;):" tooltip="Will ignore download items with one of the following in it's URL. (leave blank to disable)" />
+	<text name="download_wantStrings" label="Download URLs containing(separate with ;):" tooltip="Downloads items with these in the URL. If the item matches both an ignore item and a want item, the ignore item wins." />
+	<text name="snatcher_ignoreTitle" label="Ignore page if title contains(separate with ;):" tooltip="Will skip the page if the title contains any of these. If the title matches both an ignore item and a want item, the ignore item wins." />
+	<text name="snatcher_wantedTitles" label="Parse page if title contains(separate with ;):" tooltip="Will parse a page if the title contains any of these. If the title matches both an ignore item and a want item, the ignore item wins." />
+</OptionPanel>
+<!-- 
+#
+#Sat Jan 30 16:16:48 EST 2016
+download_sameFolder_custom=
+download_saveLinkList=false
+
+snatcher_wantTitle=
+download_saveExternalUrlList=false
+snatcher_maxLogs=5
+snatcher_saveFolder=G\:\\_output\\g.e-hentai\\
+snatcher_alwaysCheckMIME=true
+snatcher_saveFile=G\:\\_output\\g.e-hentai\\Kysaro Kemono Art Collection (2010 - 2016).msl
+
+ -->

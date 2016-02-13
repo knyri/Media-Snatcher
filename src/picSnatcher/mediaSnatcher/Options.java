@@ -45,8 +45,6 @@ import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_want;
 import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_wantTitle;
 import static picSnatcher.mediaSnatcher.OptionKeys.snatcher_wantedTitles;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -56,23 +54,15 @@ import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.text.JTextComponent;
 
 import picSnatcher.mediaSnatcher.extension.OptionPanel;
 import simple.gui.AboutWindow;
 import simple.gui.SDialog;
-import simple.gui.component.JNumberField;
-import simple.gui.factory.SJPanel;
 import simple.gui.factory.SwingFactory;
 import simple.html.MimeTypes;
 import simple.io.FileUtil;
@@ -152,49 +142,16 @@ public final class Options {
 	private String[] wantedt, ignoredt, ignoredl, wantedl, wantedd, ignoredd;
 
 	private final EnumProperties options = new EnumProperties(DEFAULTS);
-	private final JCheckBox
-		remThumbs = new JCheckBox("Attempt removal of thumbnails(may skip wanted files)", true),
-		getPics = new JCheckBox("Download Pictures", true),
-		getMovies = new JCheckBox("Download Movies"),
-		getAudio = new JCheckBox("Download Audio"),
-		getOther = new JCheckBox("Download Other"),
-		getArchive = new JCheckBox("Download Archives"),
-		getDocument = new JCheckBox("Download Documents"),
-		prettyFilenames = new JCheckBox("Pretty Filenames", true),
-		readDeep = new JCheckBox("Follow links to other pages."),
-		sameSite = new JCheckBox("From original site only.", true),
-		sameFolder = new JCheckBox("Output all to same folder"),
-		alternateNumbering = new JCheckBox("Numbered File Names"),
-		keepDlLog = new JCheckBox("Keep a log of downloaded files.(Useful for when you rename files from a daily post)"),
-		prependPageName = new JCheckBox("Prepend Page Name. (Useful for image boards)"),
-		prependPageNameAsFolder = new JCheckBox("As folder."),
-		dateSubfolder = new JCheckBox("Separate runs by date."),
-		siteFirst = new JCheckBox("Domain root folder.", true),
-		usePageDirectory = new JCheckBox("Use the page's directory as the save directory."),
-		infiniteSnatch=new JCheckBox("Loop"),
-		saveExternalLinkList=new JCheckBox("Save external link list."),
-		downloadSameSite=new JCheckBox("Same site"),
-		separateByDomain= new JCheckBox("Domain subfolders"),
-		usePageDomain= new JCheckBox("Use page's domain");
-	private final JTextField ignore = new JTextField(),
-		want = new JTextField(),
-		ignoreDlText = new JTextField(),
-		wantDlText = new JTextField(),
-		wantTitle = new JTextField(),
-		ignoreTitle= new JTextField();
-	private final JNumberField
-		minImgWidth=new JNumberField(),
-		minImgHeight=new JNumberField();
-	private final JNumberField readDepth = new JNumberField("1",5);
+
 	//adv options
 	private final JCheckBox
 		keepHeaderLog = new JCheckBox("Keep a log of the HTTP headers."),
 		alwaysCheckMIME = new JCheckBox("Always check server for MIME type.");
-	private final JTextField pageTitle = new JTextField();
 	private final SDialog optionsFrame, advOptions;
 	private final Main parent;
 	private final JTabbedPane jtPane;
 	private final List<ActionListener> uiControllers= new LinkedList<>();
+	private final OptionPanel types, download, crawl;
 	private final void uiStateUpdated(){
 		for(ActionListener al: uiControllers){
 			al.actionPerformed(null);
@@ -207,138 +164,52 @@ public final class Options {
 		options.putAll(DEFAULTS);
 		//FLOW: create UI
 		parent = frame;
+		optionsFrame = new SDialog(parent.frame,"Options", true);
 		//		session = ses;
 		//----------------TYPES TAB
-		JPanel JPtmp,page=SJPanel.makeBoxLayoutPanelY();
-		optionsFrame = new SDialog(parent.frame,"Options", true);
-		remThumbs.setToolTipText("Will attempt to remove thumbnails based on a set of common patterns.");
-		page.add(createLine(remThumbs,0));
-
-		getPics.setToolTipText("Will download pictures.");
-		page.add(createLine(getPics,0));
-
-		getMovies.setToolTipText("Will download movies. Includes Flash.");
-		page.add(createLine(getMovies,0));
-
-		getAudio.setToolTipText("Will download audio files.");
-		page.add(createLine(getAudio,0));
-
-		getArchive.setToolTipText("Will download compressed files.(zip, tar, rar, gzip, etc.)");
-		page.add(createLine(getArchive,0));
-
-		getDocument.setToolTipText("Will download document files.(doc, ppt, wri, ods, ect.)");
-		page.add(createLine(getDocument,0));
-
-		getOther.setToolTipText("Will download anything not defined as a picture, audio, or movie file found on pages.");
-		page.add(createLine(getOther,0));
-		jtPane.addTab("Types",new JScrollPane(page));
-//-----------DOWNLOAD TAB
+		types= new OptionPanel("Types",Options.class.getResourceAsStream("option-panels/Types.xml"));
+		addPage(types);
+		//-----------DOWNLOAD TAB
+		download= new OptionPanel("Download",Options.class.getResourceAsStream("option-panels/Download.xml"));
+		addPage(download);
 		uiController= new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				prependPageName.setEnabled(!sameFolder.isSelected());
-				prependPageNameAsFolder.setEnabled(prependPageName.isSelected());
-				siteFirst.setEnabled(dateSubfolder.isSelected() && !sameFolder.isSelected());
-				separateByDomain.setEnabled(sameFolder.isSelected());
+				JCheckBox
+					sameFolder= download.getCheckBox(download_sameFolder.toString()),
+					prependPage= download.getCheckBox(download_prependPage.toString()),
+					ppPageAsDir= download.getCheckBox(download_ppAsDir.toString()),
+					domainSubFolder= download.getCheckBox(download_separateByDomain.toString()),
+					dateSubfolder= download.getCheckBox(OptionKeys.download_dateSubfolder.toString()),
+					siteFirst= download.getCheckBox(OptionKeys.download_siteFirst.toString());
+				siteFirst.setEnabled(dateSubfolder.isSelected());
+				if(sameFolder.isSelected()){
+					prependPage.setSelected(false);
+					prependPage.setEnabled(false);
+					domainSubFolder.setEnabled(true);
+				}else{
+					prependPage.setEnabled(true);
+					domainSubFolder.setEnabled(false);
+				}
+				if(prependPage.isSelected()){
+					ppPageAsDir.setEnabled(true);
+					sameFolder.setEnabled(false);
+				}else{
+					sameFolder.setEnabled(true);
+				}
 			}
 		};
+		download.getCheckBox(OptionKeys.download_sameFolder.toString()).addActionListener(uiController);
+		download.getCheckBox(OptionKeys.download_dateSubfolder.toString()).addActionListener(uiController);
+		download.getCheckBox(OptionKeys.download_prependPage.toString()).addActionListener(uiController);
+		download.getCheckBox(OptionKeys.download_ppAsDir.toString()).addActionListener(uiController);
+		download.getCheckBox(OptionKeys.download_dateSubfolder.toString()).addActionListener(uiController);
+		download.getCheckBox(OptionKeys.download_siteFirst.toString()).addActionListener(uiController);
 		uiControllers.add(uiController);
-		page=SJPanel.makeBoxLayoutPanelY();
-		keepDlLog.setToolTipText("Will keep a log of previously dowloaded files. Useful when you've deleted unwanted files from a site that you plan to scan again.");
-		page.add(createLine(keepDlLog,0));
-
-		prettyFilenames.setToolTipText("Will make filenames more readable by removing some HTML escape sequences. (non-displayable characters and those forbidden in filenames will be left escaped)");
-		page.add(createLine(prettyFilenames,0));
-
-		sameFolder.setToolTipText("Will save all files found to one folder. Works best when combined with alternate numbering.");
-		page.add(createLine(sameFolder,0));
-		sameFolder.addActionListener(uiController);
-
-		separateByDomain.setToolTipText("Separates the files by domain.");
-		page.add(createLine(separateByDomain,1));
-
-		dateSubfolder.setToolTipText("Will create a subfolder with today's date and use that as the root folder under the site.");
-		page.add(createLine(dateSubfolder,0));
-		dateSubfolder.addActionListener(uiController);
-
-		siteFirst.setToolTipText("Will use the domain as the root and the date will be a subfolder.");
-		page.add(createLine(siteFirst,1));
-
-		usePageDomain.setToolTipText("Uses the page's domain instead of the file's.");
-		page.add(createLine(usePageDomain,0));
-
-		usePageDirectory.setToolTipText("Will use the page's directory to save content found on that page.(combinable with other options)");
-		page.add(createLine(usePageDirectory,0));
-
-		prependPageName.setToolTipText("Will prepend the filename of the page that the file was found on minus the extention.");
-		page.add(createLine(prependPageName,0));
-		prependPageName.addActionListener(uiController);
-
-		prependPageNameAsFolder.setToolTipText("If unchecked the pagename will be added to the filename (page_file). If checked it will create a subfolder (path\\page\\file).");
-		page.add(createLine(prependPageNameAsFolder,1));
-
-		alternateNumbering.setToolTipText("Uses a number scheme to name files. ####_### (pageNum_fileNum). Useful when sites give files non-sense names that throw off order.");
-		page.add(createLine(alternateNumbering,0));
-
-		downloadSameSite.setToolTipText("Will only download the file if the domains match. (e.g. a file found on a page from www.example.com and that is hosted on static.example.com will be downloaded)");
-		page.add(createLine(downloadSameSite,1));
-		jtPane.addTab("Download",new JScrollPane(page));
 
 //-----------CRAWL TAB
-		page=SJPanel.makeBoxLayoutPanelY();
-		infiniteSnatch.setToolTipText("Will start over when done until Stop is pressed or this checkbox is unchecked.");
-		page.add(createLine(infiniteSnatch,0));
-
-		readDeep.setToolTipText("Will read links to other pages.");
-		page.add(createLine(readDeep,0));
-
-		JPtmp = SJPanel.makeBoxLayoutPanelX();
-		JPtmp.add(new JLabel("Follow links "));
-		readDepth.setPreferredSize(new Dimension(30, readDepth.getHeight()));
-		JPtmp.add(readDepth);
-		JPtmp.add(new JLabel(" pages deep."));
-		JPtmp.add(Box.createGlue());
-		JPtmp.setToolTipText("Will follow links N pages deep.");
-		page.add(JPtmp);
-
-		sameSite.setToolTipText("Will only read pages that are on the same website as the original page.");
-		page.add(createLine(sameSite,0));
-
-		JPtmp = SJPanel.makeBoxLayoutPanelX();
-		JPtmp.add(new JLabel("Minimum image width "));
-		JPtmp.add(minImgWidth);
-		JPtmp.setToolTipText("This is a best effort algorithm. Depends on the page to tell me what the width is and up to the parser to honor it.");
-		page.add(JPtmp);
-
-		JPtmp = SJPanel.makeBoxLayoutPanelX();
-		JPtmp.add(new JLabel("Minimum image height "));
-		JPtmp.add(minImgHeight);
-		JPtmp.setToolTipText("This is a best effort algorithm. Depends on the page to tell me what the height is and up to the parser to honor it.");
-		page.add(JPtmp);
-
-		ignore.setToolTipText("Will skip pages with one of the following in it's URL. (leave blank to disable)");
-		page.add(SJPanel.makeLabeledPanel(ignore, "Do not read URLs containing(separate with ;):"));
-
-		want.setToolTipText("Reads only pages with these in the URL. If the page matches both a skip rule and a read rule, the skip rule wins.");
-		page.add(SJPanel.makeLabeledPanel(want, "Read URLs containing(separate with ;):"));
-
-		ignoreDlText.setToolTipText("Will ignore download items with one of the following in it's URL. (leave blank to disable)");
-		page.add(SJPanel.makeLabeledPanel(ignoreDlText, "Do not download URLs containing(separate with ;):"));
-
-		wantDlText.setToolTipText("Downloads items with these in the URL. If the item matches both an ignore item and a want item, the ignore item wins.");
-		page.add(SJPanel.makeLabeledPanel(wantDlText, "Download URLs containing(separate with ;):"));
-
-		wantTitle.setToolTipText("Will parse a page if the title contains any of these. If the title matches both an ignore item and a want item, the ignore item wins.");
-		page.add(SJPanel.makeLabeledPanel(wantTitle, "Parse page if title contains(separate with ;):"));
-
-		ignoreTitle.setToolTipText("Will skip the page if the title contains any of these. If the title matches both an ignore item and a want item, the ignore item wins.");
-		page.add(SJPanel.makeLabeledPanel(ignoreTitle, "Ignore page if title contains(separate with ;):"));
-		jtPane.addTab("Crawl",new JScrollPane(page));
-//-----------MISC TAB
-		page=SJPanel.makeBoxLayoutPanelY();
-		saveExternalLinkList.setToolTipText("Will save a list of external links found on the pages.");
-		page.add(SJPanel.makeLabeledPanel(saveExternalLinkList, "Save list of external links:"));
-		jtPane.addTab("Miscellaneous",new JScrollPane(page));
+		crawl= new OptionPanel("Crawl",Options.class.getResourceAsStream("option-panels/Crawl.xml"));
+		addPage(crawl);
 //-----------END TABS
 		optionsFrame.addCenter(jtPane);
 		JButton bTmp = SwingFactory.makeJButton("Okay", "");
@@ -347,41 +218,22 @@ public final class Options {
 		bTmp.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(final ActionEvent e) {//FLOW: UI to Data
-				//Edit to add option!
-				options.setProperty(download_removeThumbs, getTF(remThumbs));
-				options.setProperty(download_prettyFilenames, getTF(prettyFilenames));
-				options.setProperty(download_saveExternalUrlList, getTF(saveExternalLinkList));
-				options.setProperty(download_alternateNumbering, getTF(alternateNumbering));
-				options.setProperty(download_keepDownloadLog, getTF(keepDlLog));
-				options.setProperty(download_siteFirst, getTF(siteFirst));
-				options.setProperty(download_ingoreStrings, ignoreDlText.getText());
-				options.setProperty(download_wantStrings, wantDlText.getText());
-				options.setProperty(download_sameSite,getValue(downloadSameSite));
 
-				options.setProperty(download_sameFolder, getTF(sameFolder));
-				options.setProperty(download_prependPage, getTF(prependPageName));
-				options.setProperty(download_ppAsDir, getTF(prependPageNameAsFolder));
-				options.setProperty(download_dateSubfolder, getTF(dateSubfolder));
-				options.setProperty(download_usePageDirectory, getTF(usePageDirectory));
-				options.setProperty(download_separateByDomain,getValue(separateByDomain));
-				options.setProperty(download_usePageDomain, getValue(usePageDomain));
+				Enumeration<String> keys;
+				keys= types.getKeys();
+				for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+					options.setProperty(key, types.getItemValue(key));
+				}
 
-				options.setProperty(snatcher_getPictures, getTF(getPics));
-				options.setProperty(snatcher_getMovies, getTF(getMovies));
-				options.setProperty(snatcher_getAudio, getTF(getAudio));
-				options.setProperty(snatcher_getArchives, getTF(getArchive));
-				options.setProperty(snatcher_getOther, getTF(getOther));
-				options.setProperty(snatcher_getDocuments, getTF(getDocument));
-				options.setProperty(snatcher_readDeep, getTF(readDeep));
-				options.setProperty(snatcher_readDepth, readDepth.getText());
-				options.setProperty(snatcher_sameSite, getTF(sameSite));
-				options.setProperty(snatcher_ignore, ignore.getText());
-				options.setProperty(snatcher_want, want.getText());
-				options.setProperty(snatcher_wantTitle, wantTitle.getText());
-				options.setProperty(snatcher_ignoreTitle, ignoreTitle.getText());
-				options.setProperty(snatcher_minImgWidth,minImgWidth.getText());
-				options.setProperty(snatcher_minImgHeight,minImgHeight.getText());
-				options.setProperty(snatcher_repeat,getTF(infiniteSnatch));
+				keys= download.getKeys();
+				for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+					options.setProperty(key, download.getItemValue(key));
+				}
+
+				keys= crawl.getKeys();
+				for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+					options.setProperty(key, crawl.getItemValue(key));
+				}
 				updateWanted();
 				optionsFrame.setVisible(false);
 			}
@@ -394,9 +246,7 @@ public final class Options {
 		advOptions.addCenter(alwaysCheckMIME);
 		keepHeaderLog.setToolTipText("Will keep a log of the HTTP headers sent to and recieved from the servers. This setting is NOT persistant does not affect the items found.");
 		advOptions.addCenter(keepHeaderLog);
-		pageTitle.setToolTipText("Will ignore pages that do not have one of the following in it's title. (leave blank to disable checking)");
-		advOptions.addCenter(new JLabel("Download from pages with one of these in the title:"));
-		advOptions.addCenter(SJPanel.makeTitledPanel("(Separate with ';')", new BorderLayout(),pageTitle));
+
 		bTmp = SwingFactory.makeJButton("Okay", "");
 		bTmp.addActionListener(new ActionListener() {
 			@Override
@@ -446,39 +296,23 @@ public final class Options {
 		}
 	}
 	private void setupOptions() {//FLOW: data to UI
-		//Edit to add option!
-		setValue(saveExternalLinkList,	getOption(download_saveExternalUrlList));
-		setValue(remThumbs,		getOption(download_removeThumbs));
-		setValue(getPics,				getOption(snatcher_getPictures));
-		setValue(getMovies,			getOption(snatcher_getMovies));
-		setValue(getAudio,			getOption(snatcher_getAudio));
-		setValue(getArchive,			getOption(snatcher_getArchives));
-		setValue(getDocument,		getOption(snatcher_getDocuments));
-		setValue(getOther,			getOption(snatcher_getOther));
-		setValue(prettyFilenames,	getOption(download_prettyFilenames));
-		setValue(readDeep,			getOption(snatcher_readDeep));
-		setValue(readDepth,			getOption(snatcher_readDepth));
-		setValue(sameSite,			getOption(snatcher_sameSite));
-		setValue(sameFolder,		getOption(download_sameFolder));
-		setValue(alternateNumbering,	getOption(download_alternateNumbering));
-		setValue(keepDlLog,			getOption(download_keepDownloadLog));
-		setValue(prependPageName,	getOption(download_prependPage));
-		setValue(prependPageNameAsFolder,	getOption(download_ppAsDir));
-		setValue(usePageDirectory,	getOption(download_usePageDirectory));
-		setValue(dateSubfolder,		getOption(download_dateSubfolder));
-		setValue(siteFirst,				getOption(download_siteFirst));
-		setValue(minImgWidth,		getOption(snatcher_minImgWidth));
-		setValue(minImgHeight,		getOption(snatcher_minImgHeight));
-		setValue(infiniteSnatch,		getOption(snatcher_repeat));
-		setValue(usePageDomain,	getOption(download_usePageDomain));
-		setValue(ignore,				getOption(snatcher_ignore));
-		setValue(want,					getOption(snatcher_want));
-		setValue(ignoreDlText,		getOption(download_ingoreStrings));
-		setValue(wantDlText,			getOption(download_wantStrings));
-		setValue(wantTitle,			getOption(snatcher_wantTitle));
-		setValue(ignoreTitle,			getOption(snatcher_ignoreTitle));
-		setValue(downloadSameSite,	getOption(download_sameSite));
-		setValue(separateByDomain,	getOption(download_separateByDomain));
+
+		Enumeration<String> keys;
+
+		keys= types.getKeys();
+		for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+			types.setItemValue(key, options.getProperty(key));
+		}
+
+		keys= download.getKeys();
+		for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+			download.setItemValue(key, options.getProperty(key));
+		}
+
+		keys= crawl.getKeys();
+		for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+			crawl.setItemValue(key, options.getProperty(key));
+		}
 
 		uiStateUpdated();
 	}
@@ -489,7 +323,6 @@ public final class Options {
 	}
 	private void setupAdvOptions() {
 		alwaysCheckMIME.setSelected(getTF(options.getProperty(snatcher_alwaysCheckMIME)));
-		pageTitle.setText(options.getProperty(snatcher_wantedTitles, ""));
 	}
 	protected void showAdvOptions() {
 		setupAdvOptions();
@@ -575,7 +408,9 @@ public final class Options {
 	}
 	private static final String[] thumbs = new String[] {"thumbnail","sample","-thumb","thumb_","thumb-","_thumb","/thumb","/mini","_tn","tn_", "preview", "_small", "/small", "small_","_icon", "ico_","icon_","/icon"};
 	public boolean isThumb(String link) {
-		if (!remThumbs.isSelected()) return false;
+		if(getTF(options.getProperty(download_removeThumbs)) == false){
+			return false;
+		}
 		link = link.toLowerCase();
 		for (int i = 0;i<thumbs.length;i++) {
 			if (link.indexOf(thumbs[i])>=0) {
@@ -877,30 +712,7 @@ public final class Options {
 // ----------------------------------------------
 // --------------UTILITY------------------------
 // ----------------------------------------------
-	private static Box createLine(JComponent comp,int indent){
-		Box box=Box.createHorizontalBox();
-		if(indent>0)box.add(Box.createHorizontalStrut(25*indent));
-		box.add(comp);
-		box.add(Box.createGlue());
-		return box;
-	}
-	private static final void setValue(JComponent c, String v){
-		if(c instanceof JTextComponent){
-			((JTextComponent)c).setText(v);
-		}
-		if(c instanceof JCheckBox){
-			((JCheckBox)c).setSelected(getTF(v));
-		}
-	}
-	private static final String getValue(JComponent c){
-		if(c instanceof JTextComponent){
-			return ((JTextComponent)c).getText();
-		}
-		if(c instanceof JCheckBox){
-			return getTF(((JCheckBox)c).isSelected());
-		}
-		return c.toString();
-	}
+
 	private static final String getTF(JCheckBox box){
 		return getTF(box.isSelected());
 	}

@@ -1,0 +1,10 @@
+<OptionPanel>
+	<label value="A list of known file types can be seen by going to Help -> Known File Types." />
+	<check name="download_removeThumbs" label="Attempt removal of thumbnails (may skip wanted files)"/>
+	<check name="snatcher_getPictures" label="Download pictures" />
+	<check name="snatcher_getMovies" label="Download movies" tooltip="swf, m4v, mp4, avi, mpg, mkv, ..." />
+	<check name="snatcher_getAudio" label="Download audio" tooltip="wav, mp4, m4a, wma, ..." />
+	<check name="snatcher_getArchives" label="Download archives" tooltip="zip, tar, rar, gzip, ..."  />
+	<check name="snatcher_getDocuments" label="Download documents" tooltip="doc, ppt, wri, ods, ..." />
+	<check name="snatcher_getOther" label="Download other" tooltip="sh, bat, exe, ..." />
+</OptionPanel>

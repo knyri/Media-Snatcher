@@ -1,0 +1,4 @@
+<OptionPanel>
+	<text name="username" label="Username:" />
+	<text name="password" label="Password:" value="" />
+</OptionPanel>

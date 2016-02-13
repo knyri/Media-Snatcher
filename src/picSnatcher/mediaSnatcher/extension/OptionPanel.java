@@ -3,7 +3,6 @@
  */
 package picSnatcher.mediaSnatcher.extension;
 
-import java.awt.FlowLayout;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -14,6 +13,7 @@ import java.text.ParseException;
 import java.util.Collections;
 import java.util.Enumeration;
 
+import javax.swing.Box;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -49,6 +49,15 @@ public final class OptionPanel {
 	private final CIHashtable<JComponent> items = new CIHashtable<JComponent>();
 	public OptionPanel(String title) {
 		this.title= title;
+	}
+	public JTextArea getTextArea(String name){
+		return (JTextArea) getComponent(name);
+	}
+	public JCheckBox getCheckBox(String name){
+		return (JCheckBox) getComponent(name);
+	}
+	public JTextField getTextField(String name){
+		return (JTextField) getComponent(name);
 	}
 	public JComponent getComponent(String name){
 		return items.get(name);
@@ -104,13 +113,30 @@ public final class OptionPanel {
 		}
 	}
 	private final CIString
+		atrValue= new CIString("value").intern(),
+		tagLabel= new CIString("label").intern(),
+		tagTextArea= new CIString("textarea").intern(),
+		tagText= new CIString("text").intern(),
+		tagCheck= new CIString("check").intern(),
 		atrName= new CIString("name").intern(),
 		atrTooltip= new CIString("tooltip").intern(),
-		atrLabel= new CIString("label").intern(),
-		atrValue= new CIString("value").intern();
+		atrLabel= tagLabel,
+		atrIndent= new CIString("indent").intern()
+		;
 
 	private void build(Tag tag){
+		if(tag.getName().equals(tagLabel)){
+			if(!tag.hasProperty(atrValue)){
+				throw new IllegalStateException("value is a required attribute for label.");
+			}
+			addLabel(tag.getProperty(atrValue));
+			return;
+		}
+
+
 		final String name, label, tooltip;
+		int indent= 0;
+
 		name= tag.getProperty(atrName);
 		if(name == null){
 			throw new IllegalStateException("name is a required attribute.");
@@ -121,18 +147,18 @@ public final class OptionPanel {
 			throw new IllegalStateException("label is a required attribute.");
 		}
 
+		if(tag.hasProperty(atrIndent)){
+			indent= Integer.parseInt(tag.getProperty(atrIndent),10);
+		}
+
 		tooltip= tag.getProperty(atrTooltip);
 
-		if(tag.getName().equals("textarea")){
-			addTextArea(name, label, tooltip);
-		}else if(tag.getName().equals("text")){
-			addTextField(name, label, tooltip);
-		}else if(tag.getName().equals("check")){
-			if(!tag.getParent().getName().equals("optionpanel")){
-				addSubCheckBox(name,label,tooltip,tag.getParent().getProperty(atrName));
-			}else{
-				addCheckBox(name, label, tooltip);
-			}
+		if(tag.getName().equals(tagTextArea)){
+			addTextArea(name, label, tooltip, indent);
+		}else if(tag.getName().equals(tagText)){
+			addTextField(name, label, tooltip, indent);
+		}else if(tag.getName().equals(tagCheck)){
+			addCheckBox(name, label, tooltip, indent);
 		}
 		if(tag.getProperty(atrValue) != null){
 			this.setItemValue(name,tag.getProperty(atrValue));
@@ -154,55 +180,50 @@ public final class OptionPanel {
 	 * @param display Label
 	 * @param toolTip Tooltip
 	 */
-	public void addCheckBox(String name, String display, String toolTip) {
+	public void addCheckBox(String name, String display, String toolTip, int indent) {
 		JComponent c = new JCheckBox(display);
 		c.setToolTipText(toolTip);
 		items.put(name, c);
-		center.add(c);
+		add(c, indent);
 	}
 	/**
-	 * @param name Name used to get this value
 	 * @param display Label
-	 * @param toolTip Tooltip
-	 * @param parentName Name of the parent checkbox
 	 */
-	public void addSubCheckBox(String name, String display, String toolTip, String parentName) {
-		JComponent c = new JCheckBox(display);
-		c.setToolTipText(toolTip);
-		items.put(name, c);
-		JPanel tmp = new JPanel(new FlowLayout(FlowLayout.CENTER));
-		tmp.add(c);
-		center.add(tmp);
+	public void addLabel(String display) {
+		add(new JLabel(display), 0);
 	}
 	/**
 	 * @param name Name used to get this value
 	 * @param display Label
 	 * @param toolTip Tooltip
 	 */
-	public void addTextField(String name, String display, String toolTip) {
+	public void addTextField(String name, String display, String toolTip, int indent) {
 		JComponent c = new JTextField();
 		c.setToolTipText(toolTip);
 		items.put(name, c);
 		JPanel tmp = SJPanel.makeBoxLayoutPanelX();
 		tmp.add(new JLabel(display));
 		tmp.add(c);
-		center.add(tmp);
+		add(tmp, indent);
 	}
 	/**
 	 * @param name Name used to get this value
 	 * @param display Label
 	 * @param toolTip Tooltip
 	 */
-	public void addTextArea(String name, String display, String toolTip) {
+	public void addTextArea(String name, String display, String toolTip, int indent) {
 		JComponent c = new JTextArea();
 		c.setToolTipText(toolTip);
 		items.put(name, c);
 		c= new JScrollPane(c);
 		c.setSize(300,300);
-		JPanel tmp = SJPanel.makeBoxLayoutPanelY();
+		JComponent tmp = SJPanel.makeBoxLayoutPanelY();
 		tmp.add(new JLabel(display));
 		tmp.add(c);
-		center.add(tmp);
+		add(tmp, indent);
+	}
+	private void add(JComponent c, int indent){
+		center.add(createLine(c, indent));
 	}
 	/**
 	 * @param name Name of the element
@@ -246,5 +267,13 @@ public final class OptionPanel {
 			public String nextElement() {
 				return keys.nextElement().toString();
 			}};
+	}
+
+	private static Box createLine(JComponent comp,int indent){
+		Box box=Box.createHorizontalBox();
+		if(indent>0)box.add(Box.createHorizontalStrut(25*indent));
+		box.add(comp);
+		box.add(Box.createGlue());
+		return box;
 	}
 }

@@ -42,7 +42,7 @@ import simple.util.logging.LogFactory;
  */
 public final class PageReader{
 	private static final Log log = LogFactory.getLogFor(PageReader.class);
-	private final static ParserConstants pconst = HtmlConstants.PARSER_CONSTANTS;
+	public final static ParserConstants pconst = HtmlConstants.PARSER_CONSTANTS;
 	private final Session session;
 	private final Uri page;
 	private final Timer timer = new Timer();

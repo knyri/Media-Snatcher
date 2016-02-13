@@ -53,4 +53,6 @@ public final class Constants{
 		atr_action=new CIString("action"),
 		atr_data=new CIString("data");
 
+	public static final CIString tag_h1=new CIString("h1");
+
 }

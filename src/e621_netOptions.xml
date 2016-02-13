@@ -1,4 +1,4 @@
 <OptionPanel>
-	<textarea name="ignore" tooltip="Ignores these tag combinations. One combination per line. Works the same as the ignore feature on the website." label="Ignore tags:" value="" />
-	<textarea name="target" tooltip="Only downloads these tag combinations. One combination per line." label="Password:" value="" />
+	<textarea name="ignored" tooltip="Ignores these tag combinations. One combination per line. Works the same as the ignore feature on the website." label="Ignore tags:" value="" />
+	<textarea name="wanted" tooltip="Only downloads these tag combinations. One combination per line." label="Wanted Tags:" value="" />
 </OptionPanel>
