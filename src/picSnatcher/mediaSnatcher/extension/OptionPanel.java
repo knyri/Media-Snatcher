@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
-import java.util.Collections;
-import java.util.Enumeration;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Set;
 
 import javax.swing.Box;
 import javax.swing.JCheckBox;
@@ -47,6 +49,28 @@ public final class OptionPanel {
 	private final String title;
 	private final JPanel center = SJPanel.makeBoxLayoutPanelY();
 	private final CIHashtable<JComponent> items = new CIHashtable<JComponent>();
+	private LinkedList<OptionPanelListener> listeners= new LinkedList<>();
+	public void addListener(OptionPanelListener listener){
+		listeners.add(listener);
+	}
+	public void fireClosed(){
+		for(OptionPanelListener listener : listeners){
+			try{
+				listener.panelClosed(this);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
+	public void fireOpened(){
+		for(OptionPanelListener listener : listeners){
+			try{
+				listener.panelOpened(this);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
 	public OptionPanel(String title) {
 		this.title= title;
 	}
@@ -78,6 +102,9 @@ public final class OptionPanel {
 			if(tag == null)
 				throw new IllegalArgumentException("Not a valid OptionPanel document.");
 			for(Tag t : tag){
+				if(t.getName().equals(Tag.CDATA) || t.getName().equals(Tag.HTMLCOMM)){
+					continue;
+				}
 				build(t);
 			}
 		}catch(IOException | ParseException e){
@@ -103,6 +130,9 @@ public final class OptionPanel {
 			if(tag == null)
 				throw new IllegalArgumentException("Not a valid OptionPanel document.");
 			for(Tag t : tag){
+				if(t.getName().equals(Tag.CDATA) || t.getName().equals(Tag.HTMLCOMM)){
+					continue;
+				}
 				build(t);
 			}
 		}catch(Exception e){
@@ -244,28 +274,98 @@ public final class OptionPanel {
 	 */
 	public String getItemValue(String name) {
 		JComponent c = items.get(name);
-		if (c==null)
+//		System.out.print(name + " ");
+//		System.out.println(c);
+		if (c==null){
 			return null;
-		if (c instanceof JCheckBox)
+		}
+		if (c instanceof JCheckBox){
 			return Options.getTF(((JCheckBox)c).isSelected());
-		if (c instanceof JTextComponent)
+		}
+		if (c instanceof JTextComponent){
 			return ((JTextComponent)c).getText();
+		}
 		return null;
 	}
 	/**
 	 * @return An enumeration of all the keys
 	 */
-	public Enumeration<String> getKeys() {
-		return new Enumeration<String>() {
-			final Enumeration<CIString> keys = Collections.enumeration(items.keySet());
+	public Set<String> getKeys() {
+		return new Set<String>() {
+			final Set<CIString> keys = items.keySet();
 			@Override
-			public boolean hasMoreElements() {
-				return keys.hasMoreElements();
+			public boolean add(String arg0){
+				return false;
 			}
 
 			@Override
-			public String nextElement() {
-				return keys.nextElement().toString();
+			public boolean addAll(Collection<? extends String> arg0){
+				return false;
+			}
+
+			@Override
+			public void clear(){}
+
+			@Override
+			public boolean contains(Object arg0){
+				return false;
+			}
+
+			@Override
+			public boolean containsAll(Collection<?> arg0){
+				return false;
+			}
+
+			@Override
+			public boolean isEmpty(){
+				return keys.isEmpty();
+			}
+
+			@Override
+			public Iterator<String> iterator(){
+				return new Iterator<String>(){
+					Iterator<CIString> strings= keys.iterator();
+					@Override
+					public boolean hasNext(){
+						return strings.hasNext();
+					}
+
+					@Override
+					public String next(){
+						return strings.next().toString();
+					}
+
+				};
+			}
+
+			@Override
+			public boolean remove(Object arg0){
+				return false;
+			}
+
+			@Override
+			public boolean removeAll(Collection<?> arg0){
+				return false;
+			}
+
+			@Override
+			public boolean retainAll(Collection<?> arg0){
+				return false;
+			}
+
+			@Override
+			public int size(){
+				return 0;
+			}
+
+			@Override
+			public Object[] toArray(){
+				return null;
+			}
+
+			@Override
+			public <T>T[] toArray(T[] arg0){
+				return null;
 			}};
 	}
 

@@ -76,9 +76,10 @@ import simple.util.logging.LogFactory;
  */
 public final class Options {
 	private static final Log log = LogFactory.getLogFor(Options.class);
-	static final AboutWindow HELP_WINDOW = new AboutWindow(null, "Help", false);
+	static final AboutWindow HELP_WINDOW = new AboutWindow((java.awt.Frame)null, "Help", false);
 	static final String FALSE = "false", TRUE = "true";
 	private static final EnumProperties DEFAULTS = new EnumProperties();
+	private final LinkedList<OptionPanel> panels= new LinkedList<>();
 	static {
 		final JTextArea help = new JTextArea("Top Text Box: Enter the URL here. If there is an obvious number sequence you can replace the number with ^gal^ for use with the next section.\n" +
 				"Gal Syntax: The number of leading zeros. 0 is one; 00 is two, 000 is three, and so on. You may use any character here.\n" +
@@ -219,22 +220,23 @@ public final class Options {
 			@Override
 			public void actionPerformed(final ActionEvent e) {//FLOW: UI to Data
 
-				Enumeration<String> keys;
-				keys= types.getKeys();
-				for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+				for(String key: types.getKeys()){
 					options.setProperty(key, types.getItemValue(key));
 				}
 
-				keys= download.getKeys();
-				for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+
+				for(String key: download.getKeys()){
 					options.setProperty(key, download.getItemValue(key));
 				}
 
-				keys= crawl.getKeys();
-				for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+				for(String key: crawl.getKeys()){
 					options.setProperty(key, crawl.getItemValue(key));
 				}
+//				options.setProperty(snatcher_want.name(), crawl.getItemValue(snatcher_want.name()));
 				updateWanted();
+				for(OptionPanel panel: panels){
+					panel.fireClosed();
+				}
 				optionsFrame.setVisible(false);
 			}
 		});
@@ -253,6 +255,7 @@ public final class Options {
 			public void actionPerformed(final ActionEvent e) {//FLOW: UI to Data
 				//Edit to add option!
 				options.setProperty(snatcher_alwaysCheckMIME, getTF(alwaysCheckMIME));
+
 				//TODO: see below
 				//header log
 				//page title
@@ -281,10 +284,12 @@ public final class Options {
 		if (!options.getProperty(snatcher_ignore, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
 			ignoredl = options.getProperty(snatcher_ignore, "").split(";");
+			log.debug("ignore url",ignoredl);
 		}
 		if (!options.getProperty(snatcher_want, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
 			wantedl = options.getProperty(snatcher_want, "").split(";");
+			log.debug("wanted url",wantedl);
 		}
 		if (!options.getProperty(download_ingoreStrings, "").isEmpty()) {
 			//ignore.setText(ignore.getText().toLowerCase().trim());
@@ -297,20 +302,15 @@ public final class Options {
 	}
 	private void setupOptions() {//FLOW: data to UI
 
-		Enumeration<String> keys;
-
-		keys= types.getKeys();
-		for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+		for(String key: types.getKeys()){
 			types.setItemValue(key, options.getProperty(key));
 		}
 
-		keys= download.getKeys();
-		for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+		for(String key: download.getKeys()){
 			download.setItemValue(key, options.getProperty(key));
 		}
 
-		keys= crawl.getKeys();
-		for(String key= keys.nextElement(); keys.hasMoreElements();key= keys.nextElement()){
+		for(String key: crawl.getKeys()){
 			crawl.setItemValue(key, options.getProperty(key));
 		}
 
@@ -318,6 +318,9 @@ public final class Options {
 	}
 	protected void showOptions() {
 		setupOptions();
+		for(OptionPanel panel: panels){
+			panel.fireOpened();
+		}
 		optionsFrame.center();
 		optionsFrame.setVisible(true);
 	}
@@ -330,6 +333,7 @@ public final class Options {
 		advOptions.setVisible(true);
 	}
 	public void addPage(OptionPanel panel){
+		panels.add(panel);
 		jtPane.add(panel.getTitle(), new JScrollPane(panel.getPanel()));
 	}
 	protected void savePref() {
@@ -433,8 +437,9 @@ public final class Options {
 				}
 			}
 			//if (wantl.length > 0) return false;
-		} else
+		} else{
 			return true;
+		}
 		log.debug("not in wanted page list. "+link);
 		return false;
 	}
@@ -443,7 +448,9 @@ public final class Options {
 	 * @return true if the link is in the ignored list. false otherwise or if the list is empty
 	 */
 	private boolean isInIgnoredPageList(final String link) {
-		if (ignoredl == null || ignoredl.length==0) return false;
+		if (ignoredl == null || ignoredl.length==0){
+			return false;
+		}
 		for (int i = 0; i < ignoredl.length; i++) {
 			if (link.indexOf(ignoredl[i])>=0) {
 				log.debug("in ignored list", "Matched ignore page item \""+ignoredl[i]+"\" in "+link);
@@ -492,14 +499,18 @@ public final class Options {
 	 * @return
 	 */
 	public boolean isIgnoredPage(final Uri link, final Uri ref) {
-		if (isWantedPageListCheck(link.toString().toLowerCase())) {
-			if (!sameSiteCheck(link, ref))
+		if (isWantedPageListCheck(link.toString())) {
+			if (!sameSiteCheck(link, ref)){
 				return true;
-		} else return true;//failed list checks(ignored)
+			}
+		} else {
+			return true;//failed list checks(ignored)
+		}
 		//it's not ignored; check the mime
 		final String mime = MimeTypes.getMime(link).get(0);
-		if (mime.isEmpty() || "text/html".equals(mime))
+		if (mime.isEmpty() || "text/html".equals(mime)){
 			return false;
+		}
 		log.debug("page ignored","mime: "+mime);
 		return true;
 	}
@@ -588,9 +599,12 @@ public final class Options {
 		link = link.toLowerCase();
 		if (isThumb(link)) return false;
 		if (isInWantedDlList(link)) {
-			if (isInIgnoredDlList(link)) return false;
-		} else
+			if (isInIgnoredDlList(link)){
+				return false;
+			}
+		} else {
 			return false;
+		}
 		return true;
 	}
 	/**Checks the thumbnail, wanted, and ignored lists
@@ -602,11 +616,24 @@ public final class Options {
 			updateWanted();
 		}
 		link = link.toLowerCase();
-		if (isThumb(link)) return false;
-		if (isInWantedPageList(link)) {
-			if (isInIgnoredPageList(link)) return false;
-		} else
+		if (isThumb(link)){
 			return false;
+		}
+		if(wantedl == null || wantedl.length == 0){
+			if(ignoredl == null || ignoredl.length == 0){
+				return true;
+			}
+			return !isInIgnoredPageList(link);
+		}else if (isInWantedPageList(link)) {
+			if(ignoredl == null || ignoredl.length == 0){
+				return true;
+			}
+			if (isInIgnoredPageList(link)){
+				return false;
+			}
+		} else{
+			return false;
+		}
 		return true;
 	}
 	/**Checks to see if the domains match if sameSite() is true.

@@ -60,15 +60,15 @@ public class Downloader implements Runnable {
 
 	//----Alternate Numbering Variables
 	int fileNum = 0,
-	entryNum = -1;
+		entryNum = -1;
 	//----End Alternate Numbering Variables
 
 	int cPrevDownloaded = 0,
-	cSkipped = 0,
-	cErrors = 0,
-	cDownloaded = 0,
-	cDoOvers = 0,
-	cDeleteErrors = 0;
+		cSkipped = 0,
+		cErrors = 0,
+		cDownloaded = 0,
+		cDoOvers = 0,
+		cDeleteErrors = 0;
 	private final Session session;
 	private final UrlMap Links;
 	public Downloader(final Session s, final UrlMap links) {
@@ -576,8 +576,9 @@ public class Downloader implements Runnable {
 		}else{
 			ext="";
 		}
-		if (new File(fPath+fName).exists())
+		if (new File(fPath+fName).exists()){
 			return Downloader.CEXIST;
+		}
 		if (option.getBoolean(download_alternateNumbering)) {//alternate numbering scheme
 			fName = do_str.padLeft(4, '0', Integer.toString(entryNum)) + "_" +
 					do_str.padLeft(3, '0', Integer.toString(fileNum))+ext;

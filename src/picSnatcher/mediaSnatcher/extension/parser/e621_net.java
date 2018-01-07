@@ -11,6 +11,7 @@ import picSnatcher.mediaSnatcher.PageParser;
 import picSnatcher.mediaSnatcher.PageReader;
 import picSnatcher.mediaSnatcher.Session;
 import picSnatcher.mediaSnatcher.extension.OptionPanel;
+import picSnatcher.mediaSnatcher.extension.OptionPanelListener;
 import simple.net.Uri;
 import simple.parser.ml.Page;
 import simple.parser.ml.Tag;
@@ -20,7 +21,7 @@ import simple.util.do_str;
 import simple.util.logging.Log;
 import simple.util.logging.LogFactory;
 
-public class e621_net extends PageParser{
+public class e621_net extends PageParser implements OptionPanelListener{
 	private static final Log log=LogFactory.getLogFor(e621_net.class);
 	static{
 		log.setPrintTime(true);
@@ -31,23 +32,8 @@ public class e621_net extends PageParser{
 	private final List<IgnoreFilter> ignored= new ArrayList<>();
 	public e621_net(final PageReader preader,final Session session){
 		super(preader,session);
-		String text= optionPanel.getItemValue("wanted");
-		for(String row: text.split("\n")){
-			wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
-		}
-		text= optionPanel.getItemValue("ignored");
-		for(String row: text.split("\n")){
-			List<String> ignore= new LinkedList<>(),
-				exception= new LinkedList<>();
-			for(String tag: row.split(" ")){
-				if(tag.charAt(0) == '-'){
-					exception.add(tag.substring(1));
-				}else{
-					ignore.add(tag);
-				}
-			}
-			ignored.add(new IgnoreFilter(ignore,exception));
-		}
+		optionPanel.addListener(this);
+		this.panelClosed(optionPanel);
 	}
 
 	@Override
@@ -132,7 +118,7 @@ public class e621_net extends PageParser{
 				continue;
 			}
 			// log.debug(tag.toStringTagOnly());
-			// log.debug("before",link);
+//			log.debug("before",link);
 			link=createURL(link,page,basehref);
 			if(link==null){
 				continue;
@@ -142,7 +128,9 @@ public class e621_net extends PageParser{
 			link=UrlUtil.URLescape2(link);
 			// log.debug("after",link);
 			tmpLink=new Uri(link,page.getScheme());
+//			log.debug("path",tag.getName() + " = " + tmpLink.getPath());
 			if(tag.getName().equals(Constants.tag_a) && tmpLink.getPath().startsWith("/post/show/")){
+//				log.debug("Running want test");
 				Tag img= null;
 				for(Tag t: tag){
 					if(t.getName().equals(Constants.tag_img)){
@@ -156,35 +144,45 @@ public class e621_net extends PageParser{
 						rawtags= img.getProperty(Constants.atr_title);
 					}else if(img.hasProperty(Constants.atr_alt)){
 						rawtags= img.getProperty(Constants.atr_alt);
+					}else{
+						log.debug("Tags for image not found");
 					}
 					if(rawtags != null){
 						int newline= rawtags.indexOf('\n');
-						if(newline != -1){
-							String[] tags= rawtags.substring(0,newline).trim().split(" ");
-							HashSet<String> imgTags= new HashSet<>();
-							for(String stag: tags){
-								imgTags.add(stag);
+						if(newline == -1){
+							newline= rawtags.indexOf('\r');
+						}
+						String[] tags;
+						if(newline == -1){
+							tags= rawtags.trim().split(" ");
+						}else{
+							tags= rawtags.substring(0,newline).trim().split(" ");
+						}
+						HashSet<String> imgTags= new HashSet<>();
+						for(String stag: tags){
+							imgTags.add(stag);
+						}
+						boolean wantedFlag= wanted.isEmpty();
+						for(WantedFilter filter: wanted){
+							if(filter.test(imgTags)){
+								wantedFlag= true;
+								break;
 							}
-							boolean wantedFlag= !wanted.isEmpty();
-							for(WantedFilter filter: wanted){
+						}
+						if(wantedFlag){
+							for(IgnoreFilter filter: ignored){
 								if(filter.test(imgTags)){
-									wantedFlag= true;
+									wantedFlag= false;
 									break;
 								}
 							}
-							if(wantedFlag){
-								for(IgnoreFilter filter: ignored){
-									if(filter.test(imgTags)){
-										wantedFlag= false;
-										break;
-									}
-								}
-							}
-							if(!wantedFlag){
-								continue;
-							}
+						}
+						if(!wantedFlag){
+							continue;
 						}
 					}
+				}else{
+					log.debug("Want test: Image tag not found.");
 				}
 			}
 			if(tag.getName().equals(Constants.tag_iframe)){
@@ -228,7 +226,7 @@ public class e621_net extends PageParser{
 			exceptions= unless;
 		}
 		public boolean test(HashSet<String> tags){
-			if(!tags.containsAll(ignore)){
+			if(ignore.isEmpty() || !tags.containsAll(ignore)){
 				log.debug("not ignored: didn't match", tags);
 				return false;
 			}
@@ -246,5 +244,45 @@ public class e621_net extends PageParser{
 	protected void reset(){
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public void panelOpened(OptionPanel panel){
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void panelClosed(OptionPanel panel){
+		wanted.clear();
+		ignored.clear();
+		String text= optionPanel.getItemValue("wanted");
+		for(String row: text.split("\n")){
+			row= row.trim();
+			if(row.isEmpty()){
+				continue;
+			}
+			wanted.add(new WantedFilter(new FixedSizeArrayList<String>(row.split(" "))));
+		}
+		text= optionPanel.getItemValue("ignored");
+		for(String row: text.split("\n")){
+			row= row.trim();
+			if(row.isEmpty()){
+				continue;
+			}
+			List<String> ignore= new LinkedList<>(),
+				exception= new LinkedList<>();
+			for(String tag: row.split(" ")){
+				if(tag.isEmpty()){
+					continue;
+				}
+				if(tag.charAt(0) == '-'){
+					exception.add(tag.substring(1));
+				}else{
+					ignore.add(tag);
+				}
+			}
+			ignored.add(new IgnoreFilter(ignore,exception));
+		}
 	}
 }

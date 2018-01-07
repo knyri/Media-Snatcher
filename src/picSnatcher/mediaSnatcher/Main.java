@@ -112,11 +112,15 @@ public class Main implements ActionListener {
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
 		/**/ /*
+		log = LogFactory.getLogFor(PageReader.class);
+		log.setPrintDebug(true);
+		log.setPrintInformation(true);
+		/**/ /*
 		log = LogFactory.getLogFor(UrlMap.class);
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
 		//*/
-		/*
+		//*
 		log = LogFactory.getLogFor(Downloader.class);
 		log.setPrintInformation(true);
 		log.setPrintWarning(true);
@@ -151,8 +155,8 @@ public class Main implements ActionListener {
 	final JProgressBar totPBar = new JProgressBar(0,100),//progress of items to be downloaded
 	curPBar = new JProgressBar(0,100);//progress of current download
 	//memUsage = new JProgressBar(0,0);
-	private static final javax.swing.filechooser.FileFilter saveFilter = FilterFactory.createFileFilter(".msl" ,"mediaSnatcher List (.msl)"),
-	savedFileListFilter = FilterFactory.createFileFilter(".msf", "mediaSnatcher File List (.msf)");
+	private static final javax.swing.filechooser.FileFilter saveFilter = FilterFactory.createFileChooserFilter(".msl" ,"mediaSnatcher List (.msl)"),
+	savedFileListFilter = FilterFactory.createFileChooserFilter(".msf", "mediaSnatcher File List (.msf)");
 	private final Main main = this;
 	protected final JFrame frame;
 	/** Entry point. Loads the forward removers from <i>picSnatcher/mediaSnatcher3/forwarders.ms3.conf</i>
