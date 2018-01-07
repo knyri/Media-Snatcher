@@ -42,7 +42,7 @@ import simple.util.logging.LogFactory;
  */
 public class Session implements Runnable {
 	public static Client conCont=
-			//new Client("127.0.0.1",8888);
+//			new Client("127.0.0.1",8888);
 			new Client();
 	public static final int STATE_READ = 0, STATE_DOWNLOAD = 1;
 	private int state = 0;
@@ -166,6 +166,10 @@ public class Session implements Runnable {
 	public void run() {
 		run = true;
 		option.dumpOptions();
+		dlList.clear();
+		readList.clear();
+		Links.clear();
+		linksOut.clear();
 		if (option.getBoolean(download_keepDownloadLog)) {
 			if (option.getOption(snatcher_saveFile).isEmpty()) {
 				main.Save(this);
@@ -288,10 +292,9 @@ public class Session implements Runnable {
 		if (dlLog != null) {
 			FileUtil.close(dlLog);
 		}
-		dlList.clear();
 		setState("Done.");
 		setStateExt("");
-		main.GO.setText("snatch");
+		main.GO.setText("Snatch");
 		main.GO.setActionCommand("start");
 	}
 	public void stop() {
