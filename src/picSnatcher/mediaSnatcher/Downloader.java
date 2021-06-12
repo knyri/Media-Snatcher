@@ -23,9 +23,10 @@ import java.net.SocketTimeoutException;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.message.BasicHeader;
 
+import picSnatcher.mediaSnatcher.DownloadItems.DownloadItem;
 import simple.CIString;
 import simple.html.MimeTypes;
 import simple.io.FileUtil;
@@ -35,7 +36,6 @@ import simple.time.Timer;
 import simple.time.TimerFactory;
 import simple.time.TimerFactory.Algorithm;
 import simple.util.HexUtil;
-import simple.util.Stack;
 import simple.util.TimeUtil;
 import simple.util.UrlUtil;
 import simple.util.do_str;
@@ -50,7 +50,6 @@ import simple.util.logging.LogFactory;
 public class Downloader implements Runnable {
 	private static final String CERROR = "cgsPergerror", C404 = "jIbee404", COTHER = "jibber other",CEXIST="exists";
 	private final Log log = LogFactory.getLogFor(Downloader.class);
-	private final Stack<Site> redo = new Stack<Site>();
 	int retrycount = 0;
 	long totalFiles = 0;
 	// TODO: fix this thing
@@ -70,10 +69,19 @@ public class Downloader implements Runnable {
 		cDoOvers = 0,
 		cDeleteErrors = 0;
 	private final Session session;
-	private final UrlMap Links;
-	public Downloader(final Session s, final UrlMap links) {
+	private final DownloadMap Links;
+	public Downloader(final Session s, final DownloadMap links) {
 		session = s;
 		Links = links;
+	}
+	public int getDownloadedCount(){
+		return cDownloaded;
+	}
+	public int getSkippedCount(){
+		return cSkipped;
+	}
+	public int getErrorCount(){
+		return cErrors;
 	}
 	@Override
 	public void run() {
@@ -91,50 +99,51 @@ public class Downloader implements Runnable {
 		tre.setTotalItems(Links.size());
 
 		log.information("setup", "Saving files to "+option.getOption(OptionKeys.snatcher_saveFolder));
-		log.information("Number of keys", Links.keySet().size());
+		CIString[] keys= Links.keySet().toArray(new CIString[Links.keySet().size()]);
+		int start= 0, end= keys.length, inc= 1;
+		log.information("Number of keys", keys.length);
+		if(option.getBoolean(OptionKeys.download_reverseNumbering)){
+			start= end-1;
+			inc= end= -1;
+		}
 		out:
-			for (final CIString key : Links.keySet()) {
+		for (; start != end; start+= inc) {
+			if (!run) {
+				log.warning("User ended");
+				break out;
+			}
+			entryNum++;
+			fileNum = 0;
+			DownloadItem[] links= Links.get(keys[start]).toArray();
+			log.information("From page",keys[start]);
+			log.information("Number of entries", links.length);
+			int lstart= 0, lend= links.length, linc= 1;
+			if(option.getBoolean(OptionKeys.download_reverseNumbering)){
+				lstart= lend-1;
+				linc= lend= -1;
+			}
+			DownloadItem cUrl;
+			for (; lstart != lend; lstart+= linc) {
+				cUrl= links[lstart];
+				session.setStatus("URLs: "+Links.size()+" Downloaded: "+ cDownloaded+" Est. TTC: "+TimeUtil.getTime(tre.getRemaining())+" :: rate "+tre.getRate());
+				retrycount = 0;
+				totalFiles++;
+				fileNum++;
+				session.setTotalProgress((int)totalFiles, Links.size());
+				session.setTotalProgressBarText(totalFiles+"/"+Links.size());
+				log.information("url",cUrl);
+				try {
+					downloadItem(cUrl, keys[start].toString());
+					tre.sample();
+				} catch (final Exception e) {
+					log.error("Unhandled", e);
+				}
 				if (!run) {
 					log.warning("User ended");
 					break out;
 				}
-				entryNum++;
-				fileNum = 0;
-				log.information("From page",key);
-				log.information("Number of entries", Links.get(key).size());
-				for (final Uri cUrl : Links.get(key)) {
-					session.setStatus("URLs: "+Links.size()+" Retry: "+redo.size()+" Downloaded: "+ cDownloaded+" Est. TTC: "+TimeUtil.getTime(tre.getRemaining())+" :: rate "+tre.getRate());
-					retrycount = 0;
-					totalFiles++;
-					fileNum++;
-					session.setTotalProgress((int)totalFiles, Links.size());
-					session.setTotalProgressBarText(totalFiles+"/"+Links.size());
-					log.information("url",cUrl);
-					try {
-						downloadItem(cUrl, key.toString());
-						tre.sample();
-					} catch (final Exception e) {
-						log.error("Unhandled", e);
-					}
-					if (!run) {
-						log.warning("User ended");
-						break out;
-					}
-				}//end inner for
-			}//end for
-		Site tmp;
-		log.information("Reading do overs.");
-		while(!redo.isEmpty()) {
-			session.setStatus("URLs: "+Links.size()+" Retry: "+redo.size()+" Downloaded: "+ cDownloaded);
-			session.setCurrentProgressBarText(redo.size()+" redos left. "+cDoOvers+" done already.");
-			cDoOvers++;
-			retrycount = 0;
-			tmp = redo.pop();
-			fileNum = tmp.getDepth();
-			if (downloadItem(tmp.getSite(), tmp.getReferrer().getOriginalUri())) {
-				tre.sample();
-			}
-		}
+			}//end inner for
+		}//end for
 		log.information("LastChance", "Done reading do overs.");
 		session.setState("Downloaded: "+cDownloaded+" Skipped: "+cSkipped+" Previously DLed: "+cPrevDownloaded+" Errors: "+cErrors+" Do Overs: "+cDoOvers);
 		session.setStateExt("done");
@@ -143,19 +152,20 @@ public class Downloader implements Runnable {
 		log.information(new Date(System.currentTimeMillis()).toString());
 		log.information("Time elapsed: "+TimeUtil.getTime(timer.elapsed()));
 	}
-	private boolean downloadItem(Uri cUrl, final String referer){
+	private boolean downloadItem(DownloadItem item, final String referer){
 		//Shouldn't be needed since addLink() checks this
 		/*if (session.isIgnored(cUrl.toString(), new UriParser(referer))) {
 			log.information("Skipped: not wanted");
 			cSkipped++;
 			return false;
 		}*/
+		Uri cUrl= item.uri;
 		String fName = null;//File Name
 		File fTmp = null;//File to be written to
 		FileOutputStream out = null;
 		//----End File Variables
 		//----Web Variables
-		HttpResponse resp = null;
+		CloseableHttpResponse resp = null;
 		InputStream in = null;
 		//----End Web Variables
 		int bCount = 0;//used to keep track of the number of bytes downloaded
@@ -164,9 +174,9 @@ public class Downloader implements Runnable {
 		int p_cur = 0;
 		session.setState("");
 		session.setStateExt("");
-		if (!run)
-			//log.debug("USERSTOP", "~line 642");
+		if (!run){
 			return false;
+		}
 		if (session.isPrevDownloaded(cUrl.trimTrailing())) {//NOTE:dup check
 			log.information("Already downloaded "+cUrl);
 			cPrevDownloaded++;
@@ -183,7 +193,7 @@ public class Downloader implements Runnable {
 			return false;
 		}
 		try {
-			fName = createFileName(cUrl, referer, resp);
+			fName = createFileName(item, referer, resp);
 			//check for errors
 			if (fName == Downloader.CERROR){
 				FileUtil.close(resp.getEntity().getContent());
@@ -208,19 +218,6 @@ public class Downloader implements Runnable {
 			}
 		} catch (final IOException e1) {
 			log.error(e1);
-			switch (resp.getStatusLine().getStatusCode()) {
-			case -1:
-				break;
-			case 200:
-			case java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
-			case java.net.HttpURLConnection.HTTP_RESET:
-			case java.net.HttpURLConnection.HTTP_INTERNAL_ERROR:
-				final Site tmp = new Site(new Uri(referer), cUrl, fileNum, entryNum);
-				if (!redo.contains(tmp)) {
-					log.information("Added "+cUrl+" to the retry stack.");
-					redo.push(tmp);
-				}
-			}
 			session.setState("");
 			log.warning("Exceeded retry limit.");
 			cErrors++;
@@ -279,20 +276,6 @@ public class Downloader implements Runnable {
 						log.debug("FILESYSTEM", "Closing OutputStream");
 					}
 					deleteFile(fTmp);
-				}
-				switch (resp.getStatusLine().getStatusCode()) {
-				//find the error and do something
-				case -1:
-					break;
-				case 200:
-				case java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
-				case java.net.HttpURLConnection.HTTP_RESET:
-				case java.net.HttpURLConnection.HTTP_INTERNAL_ERROR:
-					final Site tmp = new Site(new Uri(referer), cUrl, fileNum, entryNum);
-					if (!redo.contains(tmp)) {
-						log.information("Added "+cUrl+" to the retry stack.");
-						redo.push(tmp);
-					}
 				}
 				log.warning("Retry count exceeded while getting input stream. Moving to next.");
 				cErrors++;
@@ -370,11 +353,6 @@ public class Downloader implements Runnable {
 						retrycount = -2;
 						continue;
 					} else {
-						final Site tmp = new Site(new Uri(referer), cUrl, fileNum, entryNum);
-						if (!redo.contains(tmp)) {
-							log.information("Added "+cUrl+" to the retry stack.");
-							redo.push(tmp);
-						}
 						FileUtil.close(in);
 						break;
 					}
@@ -402,11 +380,6 @@ public class Downloader implements Runnable {
 						retrycount = -2;
 						continue;
 					} else {
-						final Site tmp = new Site(new Uri(referer), cUrl, fileNum, entryNum);
-						if (!redo.contains(tmp)) {
-							log.information("Added "+cUrl+" to the retry stack.");
-							redo.push(tmp);
-						}
 						FileUtil.close(in);
 					}
 				}
@@ -421,19 +394,6 @@ public class Downloader implements Runnable {
 				session.addToDownloadList(cUrl.trimTrailing());//NOTE: dup check
 			}
 		} else {
-			switch (resp.getStatusLine().getStatusCode()) {
-			case -1:
-				break;
-			case 200:
-			case java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
-			case java.net.HttpURLConnection.HTTP_RESET:
-			case java.net.HttpURLConnection.HTTP_INTERNAL_ERROR:
-				final Site tmp = new Site(new Uri(referer), cUrl, fileNum, entryNum);
-				if (!redo.contains(tmp)) {
-					log.information("Added "+cUrl+" to the retry stack.");
-					redo.push(tmp);
-				}
-			}
 			cErrors++;
 			cSkipped++;
 			if (!run) {
@@ -472,11 +432,12 @@ public class Downloader implements Runnable {
 	 * @return The path of the file
 	 * @throws IOException
 	 */
-	private String createFileName(final Uri file, final String referer, final HttpResponse cc) throws IOException {
+	private String createFileName(final DownloadItem item, final String referer, final CloseableHttpResponse cc) throws IOException {
+		Uri file= item.uri;
 		final Options option = session.getOptions();
 		String Stmp;
-		String fPath= "";
-		String fName = file.getFile();
+		StringBuilder fPath= new StringBuilder();
+		String fName = item.altName != null ? item.altName : file.getFile();
 		String ext = null;
 		int index = 0;
 
@@ -492,56 +453,52 @@ public class Downloader implements Runnable {
 		}
 		if(option.getBoolean(download_sameFolder)){
 			// use the save file as the root folder
-			fPath= option.getOption(snatcher_saveFile);
-			if(fPath == null || fPath.isEmpty()){
-				fPath= "snatcher" + File.separatorChar;
+			String saveFile= option.getOption(snatcher_saveFile);
+			if(saveFile == null || saveFile.isEmpty()){
+				fPath.append("snatcher").append(File.separatorChar);
 			}else{
-				fPath= fPath.substring(fPath.lastIndexOf(File.separatorChar)+1,fPath.length() - 4) + File.separatorChar;
+				fPath.append(saveFile.substring(saveFile.lastIndexOf(File.separatorChar)+1,saveFile.length() - 4)).append(File.separatorChar);
 			}
 			if(option.getBoolean(download_separateByDomain)){
-				fPath+= domain + File.separatorChar;
+				fPath.append(domain).append(File.separatorChar);
 			}
 		}else{
 			if(option.getBoolean(download_separateByDomain)){
-				fPath+= domain + File.separatorChar;
+				fPath.append(domain).append(File.separatorChar);
 			}
 		}
 
 		if(option.getBoolean(download_dateSubfolder)){
 			if(option.getBoolean(download_siteFirst)){
 				// domain/date
-				fPath += domain + File.separatorChar + LogFactory.getDateStamp() + File.separatorChar;
+				fPath.append(domain).append(File.separatorChar).append(LogFactory.getDateStamp()).append(File.separatorChar);
 			}else{
 				// date
-				fPath += LogFactory.getDateStamp() + File.separatorChar;
+				fPath.append(LogFactory.getDateStamp()).append(File.separatorChar);
 				if(!option.getBoolean(download_sameFolder)){
 					// date/domain
-					fPath+= domain + File.separatorChar;
+					fPath.append(domain).append(File.separatorChar);
 				}
 			}
 		}
 
 		if(!option.getBoolean(download_sameFolder)){
 			if (option.getBoolean(download_usePageDirectory)) {
-				fPath += ref.getPath().substring(1).replace('/',File.separatorChar);
+				fPath.append(ref.getPath().substring(1).replace('/',File.separatorChar));
 			} else {
-				fPath += file.getPath().substring(1).replace('/',File.separatorChar);
+				fPath.append(file.getPath().substring(1).replace('/',File.separatorChar));
 			}
 		}
-
-		if(option.getBoolean(download_prependPage)){
+		if(option.getBoolean(download_prependPage) && option.getBoolean(download_ppAsDir)){
 			index = ref.getFile().lastIndexOf('.');
 			if (index==-1) {
-				fPath+= ref.getFile();
+				fPath.append(ref.getFile());
 			} else {
-				fPath+= ref.getFile().substring(0, index);
+				fPath.append(ref.getFile().substring(0, index));
 			}
-			if(option.getBoolean(download_ppAsDir)){
-				fPath+= File.separatorChar;
-			}else{
-				fPath+= '_';
-			}
+			fPath.append(File.separatorChar);
 		}
+
 
 		Stmp=null;
 		try{
@@ -562,64 +519,79 @@ public class Downloader implements Runnable {
 					fName = fName.substring(1, fName.length()-1);
 				}
 				log.information("Server suggested filename: "+fName);
-				//get the extension again
-				index = fName.lastIndexOf('.');
-				if (index != -1) {
-					ext = fName.substring(index);
-				}
 			}
 		}
 		//get extension for later
 		index = fName.lastIndexOf('.');
 		if (index != -1) {
-			ext = fName.substring(index);
+			ext= fName.substring(index);
 		}else{
-			ext="";
-		}
-		if (new File(fPath+fName).exists()){
-			return Downloader.CEXIST;
+			ext= "";
 		}
 		if (option.getBoolean(download_alternateNumbering)) {//alternate numbering scheme
 			fName = do_str.padLeft(4, '0', Integer.toString(entryNum)) + "_" +
-					do_str.padLeft(3, '0', Integer.toString(fileNum))+ext;
+					do_str.padLeft(3, '0', Integer.toString(fileNum)) + "_" + fName;
 		}
 
 		//FLOW:check extension
-		String mime = MimeTypes.getMimeFromContentType(cc.getEntity().getContentType().getValue());
+		String mime= MimeTypes.getMimeFromContentType(cc.getEntity().getContentType());
+		if(option.getBoolean(OptionKeys.download_separateByType)){
+			if(MimeTypes.isMimeImage(mime)){
+				fPath.append("image").append(File.separatorChar);
+			}else if(MimeTypes.isMimeVideo(mime)){
+				fPath.append("video").append(File.separatorChar);
+			}else if(MimeTypes.isMimeAudio(mime)){
+				fPath.append("sound").append(File.separatorChar);
+			}else if(MimeTypes.isMimeDocument(mime)){
+				fPath.append("document").append(File.separatorChar);
+			}else if(MimeTypes.isMimeArchive(mime)){
+				fPath.append("archive").append(File.separatorChar);
+			}
+		}
 		if(ext.isEmpty()){
-			List<String> exts=MimeTypes.getExt(mime);
+			List<String> exts= MimeTypes.getExt(mime);
 			if(exts.isEmpty()){
-				log.warning("No extension mapped for "+mime+"! Please let the developer know.(kcpiercejr@gmail.com)");
+				log.warning("No extension mapped for "+mime+"!");
 			}else{
-				ext=exts.get(0);
+				ext= exts.get(0);
 			}
 		}else{
-			List<String> mimes=MimeTypes.getMime(ext);
-			if(!mimes.isEmpty())
-				mime=mimes.get(0);
+			List<String> mimes= MimeTypes.getMime(ext);
+			if(!mimes.isEmpty()){
+				mime= mimes.get(0);
+			}
 		}
-		if (!option.isWantedMIME(mime)) {
+		if(!option.isWantedMIME(mime)){
 			log.information("SKIPPED", "Failed MIME test: "+ mime + " : " + file.toString());
 			cSkipped++;
 			return Downloader.COTHER;
 		}
-		if (ext != null && !ext.isEmpty()) {//extension present
-			if (!MimeTypes.getMime(ext).contains(mime)) {//is it valid for this MIME?
+		if(ext != null && !ext.isEmpty()){//extension present
+			if(!MimeTypes.getMime(ext).contains(mime)) {//is it valid for this MIME?
 				log.debug("extension not mapped to MIME. ext:"+ext+" | MIME:"+mime);
-				Stmp = MimeTypes.getExt(mime).get(0);
-				if (Stmp == null || Stmp.isEmpty()) {
-					log.warning("No extension mapped for "+mime+"! Please let the developer know.(kcpiercejr@gmail.com)");
-				} else {
-					fName = fName.substring(0, index)+'.'+Stmp;
+				Stmp= MimeTypes.getExt(mime).get(0);
+				if(Stmp == null || Stmp.isEmpty()){
+					log.warning("No extension mapped for "+mime+"!");
+				}else{
+					fName= fName.substring(0, index)+'.'+Stmp;
 				}
 			}
-		} else {//extension not present
-			Stmp = MimeTypes.getExt(mime).get(0);
+		}else{//extension not present
+			Stmp= MimeTypes.getExt(mime).get(0);
 			if (Stmp == null || Stmp.isEmpty()) {
-				log.warning("No extension mapped for "+mime+"! Please let the developer know.(kcpiercejr@gmail.com)");
+				log.warning("No extension mapped for "+mime+"!");
 			} else {
-				fName = fName.substring(0, index)+'.'+Stmp;
+				fName= fName.substring(0, index)+'.'+Stmp;
 			}
+		}
+		if(option.getBoolean(download_prependPage) && !option.getBoolean(download_ppAsDir)){
+			index= ref.getFile().lastIndexOf('.');
+			if (index==-1) {
+				fPath.append(ref.getFile());
+			} else {
+				fPath.append(ref.getFile().substring(0, index));
+			}
+			fPath.append('_');
 		}
 		/*
 		 * Combine the file path and the filename.
@@ -631,30 +603,42 @@ public class Downloader implements Runnable {
 		 */
 		if (option.getBoolean(download_prettyFilenames)) {
 			final StringBuilder resolved=new StringBuilder(fName.length());
-			int lend=0;
-			for(int i=0;i<fName.length();i++){
-				if(fName.charAt(i)!='%'){resolved.append(fName.charAt(i));continue;}
-				lend=i+3;i++;
-				if((i+2)>fName.length())continue;
-				if(fName.charAt(lend)=='%')
+			int lend= 0;
+			for(int i=0; i<fName.length(); i++){
+				if(fName.charAt(i) != '%'){
+					resolved.append(fName.charAt(i));
+					continue;
+				}
+				lend= i + 3;
+				i++;
+				if((i+2)>fName.length()){
+					continue;
+				}
+				if(fName.charAt(lend)=='%'){
 					while(fName.charAt(lend+3)=='%'){
-						lend+=3;
-						if((lend+3)>fName.length())break;
+						lend+= 3;
+						if((lend + 3) > fName.length()){
+							break;
+						}
 					}
+				}
 				resolved.append(
-						new String(
-								HexUtil.fromHex(
-										fName.substring(i,lend)
-										.replace("%",""))));
-				i=lend-1;
+					new String(
+						HexUtil.fromHex(
+							fName.substring(i,lend)
+								 .replace("%","")
+						)
+					)
+				);
+				i= lend - 1;
 			}
-			fName=resolved.toString();
-			fName = fName.replaceAll("(_20|_)", " ");
+			fName= resolved.toString();
+			fName= fName.replaceAll("(_20|_)", " ");
 			log.debug("pretty selected", "fName = "+fName);
 		}
 		if (File.separatorChar == '\\') {
-			fName = fName.replaceAll("/","\\\\");
+			fName= fName.replaceAll("/","\\\\");
 		}
-		return option.getOption(OptionKeys.snatcher_saveFolder)+fName;
+		return option.getOption(OptionKeys.snatcher_saveFolder) + fName;
 	}
 }

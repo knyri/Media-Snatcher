@@ -10,16 +10,19 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.http.Header;
-import org.apache.http.HttpRequest;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpCoreContext;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.message.BasicHeader;
+import org.apache.hc.core5.http.protocol.BasicHttpContext;
+import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.http.protocol.HttpCoreContext;
 
+import simple.collections.CIHashtable;
+import simple.collections.Stack;
 import simple.html.MimeTypes;
 import simple.net.Uri;
 import simple.parser.ml.InlineLooseParser;
@@ -28,9 +31,6 @@ import simple.parser.ml.ParserConstants;
 import simple.parser.ml.Tag;
 import simple.parser.ml.html.HtmlConstants;
 import simple.time.Timer;
-import simple.util.CIHashtable;
-import simple.util.Queue;
-import simple.util.Stack;
 import simple.util.TimeUtil;
 import simple.util.logging.Log;
 import simple.util.logging.LogFactory;
@@ -49,11 +49,13 @@ public final class PageReader{
 	private final UriFormatIterator pf;
 	private final boolean readDeep;
 	private int readDepth = 0;
+	private int currentDepth= 0;
+	private int pagesRead= 0;
+	private LinkedList<QueueElement> currentReadLinks= new LinkedList<QueueElement>();
+	private LinkedList<QueueElement> nextReadLinks= new LinkedList<QueueElement>();
 	//private int cPages = 0;
 	//private final TimeRemainingEstimator tre = TimerFactory.getTRETimer(Algorithm.SAMPLE, 15);
 	private boolean run = true;
-	//private LinkedHashMap<Uri, String> toberead[] = null;
-	private Queue<QueueElement> toberead[]=null;
 	private final Stack<Site> redo = new Stack<Site>();
 	private PageParser pp;
 	public PageReader(final Uri page, final boolean readDeep, final Session ses) {
@@ -68,27 +70,51 @@ public final class PageReader{
 		this.readDeep = readDeep;
 		this.page = null;
 	}
+	/**
+	 * Does a deep read
+	 * @throws IOException
+	 */
+	private void readDeep() throws IOException{
+		log.information("READING DEEP!!!");
+		for (currentDepth= 1; currentDepth < readDepth && run; currentDepth++) {
+			currentReadLinks= nextReadLinks;
+			nextReadLinks= new LinkedList<QueueElement>();
+			readCurrentQueue();
+		}
+		log.information("DONE READING DEEP!!!");
+	}
+	private final void readCurrentQueue() throws IOException{
+		QueueElement cur;
+		do {
+		while((cur= currentReadLinks.poll()) != null){
+			if (!run) {
+				log.information("readCurrentQueue() run stopped");
+				break;
+			}
+			log.information("Reading " + cur);
+			if (handle(cur.link, cur.referer, currentDepth)){
+				session.prTreCount();
+				pagesRead++;
+				session.addToReadList(cur.toString());
+			}
+			log.information("QUEUE SIZE: "+currentReadLinks.size());
+			session.prUpdateStatus();
+		}
+		}while(currentReadLinks.size() > 0);// sanity check
+	}
 	/** Call this function to start the process!
 	 * @return true or false if all were read successfully.
 	 */
-	@SuppressWarnings("unchecked")
 	public final boolean readSite() {
+		currentDepth= 0;
+		pagesRead= 0;
 		//NOTE: Entrance function.
 		run = true;
 		log.information("Start", new Date(System.currentTimeMillis()).toString());
 		timer.reset();
 		boolean success = true;
-		int read=0;
 		try {
 			Site tmp;
-			if (readDeep) {
-				toberead = new Queue[readDepth];
-				toberead[0] = new Queue<QueueElement>();
-			/*
-				toberead = new LinkedHashMap[readDepth];
-				toberead[0] = new LinkedHashMap<Uri, String>();
-				//*/
-			}
 			if (page != null) {
 				log.debug("reading by url");
 				session.prTotPageAdd(1);
@@ -100,62 +126,33 @@ public final class PageReader{
 			} else {
 				log.debug("reading by PictureFormat");
 				Uri cur;
-				while(run && (cur=pf.next())!=null) {
+				while(run && (cur= pf.next()) != null) {
 					if (handle(cur, null, 0)) {
 						session.prTreCount();
-						read++;
+						pagesRead++;
 						session.addToReadList(cur.toString());
 					}
 					session.prUpdateStatus();
 				}
-				log.information("DONE READING IT ALL!!!");
 			}//end else
+			// read any that were added to the current level
+			readCurrentQueue();
+			log.information("DONE READING IT ALL!!!");
 			session.prUpdateStatus();
 			if (readDeep) {
 				log.information("READING DEEP!!!");
-				QueueElement cur;
-				for (int depth = 0; depth < toberead.length && run; depth++) {
-					if (depth+1 < toberead.length) {
-						toberead[depth+1] = new Queue<QueueElement>();
-					}
-					while((cur=toberead[depth].poll())!=null){
-						if (!run) {
-							break;
-						}
-						if (handle(cur.link, cur.referer, depth+1)){
-							session.prTreCount();
-							read++;
-							session.addToReadList(cur.toString());
-						}
-						session.prUpdateStatus();
-					}
-					/*
-					for (final Map.Entry<Uri, String> entry : toberead[depth].entrySet()) {
-						if (!run) {
-							break;
-						}
-						if (handle(entry.getKey(), entry.getValue(), depth+1)){
-							session.prTreCount();
-							read++;
-							session.addToReadList(entry.toString());
-						}
-						session.prUpdateStatus();
-					}
-					//*/
-				}
+				readDeep();
 				log.information("DONE READING DEEP!!!");
 			}//end if(readDeep)
-			if (read==0){
-				session.remove(pf);
+
+			if (pagesRead == 0){
+				log.warning("No pages read: " + pf.toString());
+//				session.remove(pf);
 			}
-			//clear the toberead list if there are some redos
+
 			if (!redo.isEmpty()) {
 				log.information("READING DO OVERS!!!");
-				for (int depth = 0; depth < toberead.length && run; depth++) {
-					if (depth+1 < toberead.length) {
-						toberead[depth+1].clear();
-					}
-				}
+				nextReadLinks= new LinkedList<QueueElement>();
 				log.information("LastChance", "Reading last chance items. "+redo.size()+" items in list.");
 				while (!redo.isEmpty() && run) {//could possibly cause an infinite loop
 					tmp = redo.pop();
@@ -166,34 +163,9 @@ public final class PageReader{
 					session.prUpdateStatus();
 				}
 				if (readDeep) {
-					// deepRead the redos
 					log.information("DEEP READ ON DO OVERS");
-					QueueElement cur;
-					for (int depth = 0; depth < toberead.length && run; depth++) {
-						if (!toberead[depth].isEmpty()) {
-							while((cur=toberead[depth].poll())!=null){
-								if (!run) {
-									break;
-								}
-								if (handle(cur.link, cur.referer, depth+1)){
-									session.prUpdateStatus();
-									session.addToReadList(cur.toString());
-								}
-								session.prUpdateStatus();
-							}
-							/*for (final Map.Entry<Uri, String> entry : toberead[depth].entrySet()) {
-								if (!run) {
-									break;
-								}
-								if (handle(entry.getKey(), entry.getValue(), depth+1)){
-									session.prUpdateStatus();
-									session.addToReadList(entry.toString());
-								}
-								session.prUpdateStatus();
-							}//*/
-						}
-					}
-				}//end if(readDeep)
+					readDeep();
+				}
 				log.information("DONE READING DO OVERS!!!");
 			}
 		} catch (final Exception e) {
@@ -204,6 +176,8 @@ public final class PageReader{
 			log.debug("Stop", "Success: "+success);
 			log.information("Stop", new Date(System.currentTimeMillis()).toString());
 			log.information("Stop", "Time elapsed: "+TimeUtil.getTime(timer.elapsed()));
+			currentReadLinks= new LinkedList<QueueElement>();
+			nextReadLinks= new LinkedList<QueueElement>();
 		}
 		return success;
 	}
@@ -273,160 +247,249 @@ public final class PageReader{
 		//InputStreamReader in = null;
 		int retry = 0, start = 0;
 		boolean skip = true;
-		CloseableHttpResponse resp;
+		CloseableHttpResponse resp= null;
 		HttpContext context = new BasicHttpContext();
-		if (referer != null) {
-			resp=Session.conCont.get(link.toString(),new Header[]{new BasicHeader("Referer",referer.toString())},context);
-		}else{
-			resp=Session.conCont.get(link.toString(),null,context);
-		}
+		try{
+			if (referer != null) {
+				resp=Session.conCont.get(link.toString(),new Header[]{new BasicHeader("Referer",referer.toString())},context);
+			}else{
+				resp=Session.conCont.get(link.toString(),null,context);
+			}
 
-		HttpRequest target = (HttpRequest)context.getAttribute(HttpCoreContext.HTTP_REQUEST);
-		feedback.put("effectiveuri",target.getRequestLine().getUri());
-		if(resp.getStatusLine().getStatusCode()!=200){
-			resp.getEntity().getContent().close();
-			return true;
-		}
-		//NOTE: rechecking MIME
-		final String tmp = resp.getEntity().getContentType().getValue();
-		String mime=tmp.split(";")[0];
-		feedback.put("mime",mime);
-		if (!"text/html".equals(mime) && !"text/css".equals(mime)) {
-			session.setState("Skipped: starting next");
-			feedback.put("skip", mime+" is not text/html or text/css");
-			log.debug("readPage", "Skipped: Mime from server: "+tmp);
-			resp.getEntity().getContent().close();
-			return false;
-		} else {
-			skip = false;
-		}
-		if (skip) {
-			feedback.put("skip", "skip set to true; general");
-			session.setState("Skipped: starting next");
-			//session.setStateExt("");
-			log.information("Skipped(readPage):"+link.toString());
-			log.debug("MIME", MimeTypes.getMime(link));
-			resp.getEntity().getContent().close();
-			return false;
-		}
-		//---END PAGE CHECKING
-		final char[] buff = new char[1024];
-		for(int i=0;i<3;i++, retry++){
-			session.setState("Reading");
-			session.setStateExt(link.toString());
-			max_count = resp.getEntity().getContentLength();
-			session.setCurrentProgress(0, max_count);
-			log.debug("readPage", "page size:"+max_count);
-			feedback.put("start", System.currentTimeMillis());
+			HttpRequest target = (HttpRequest)context.getAttribute(HttpCoreContext.HTTP_REQUEST);
 
-			//TODO: check for character encoding
-			try(InputStreamReader in = new InputStreamReader(resp.getEntity().getContent(), "UTF-8")){
-				session.setState("Reading...");
-				log.information("Reading from site.");
-				cur_count = 0;
-				if (max_count > -1) {
-					//known size
-					session.setCurrentProgressBarText("0/"+max_count);
-					while (run && ((start = in.read(buff)) != -1)) {
-						store.append(buff, 0, start);
-						cur_count += start;
-						session.setCurrentProgress(cur_count, max_count);
-						session.setCurrentProgressBarText(cur_count+"/"+max_count);
-					}
-				} else {
-					//unknown size
-					session.setCurrentProgressBarText("0/??");
-					session.setCurrentProgress(0, 1);
-					while (run && ((start = in.read(buff)) != -1)) {
-						store.append(buff, 0, start);
-						cur_count += start;
-						session.setCurrentProgressBarText(cur_count+"/??");
-					}
-					session.setCurrentProgressBarText(cur_count+"/"+cur_count);
-					session.setCurrentProgress(1,1);
-				}
-				resp.close();
-				break;
-			} catch (final SocketTimeoutException e) {
-				session.setState("Timed out reading. Try "+(retry+1)+" of 3");
-				log.warning("Timeout on read "+(retry+1)+" of 3", e.getLocalizedMessage());
-				store.setLength(0);
-			} catch (SocketException e){
-				/*
-				 * Socket closed is an incomplete read.
-				 */
-				log.warning("Try "+(retry+1)+" of 3", e.getLocalizedMessage());
-				store.setLength(0);
-			} catch (final EOFException e) {
-				log.warning("Try "+(retry+1)+" of 3", e.getLocalizedMessage());
-				store.setLength(0);
-			} catch (final IOException e) {
-				resp.close();
-				session.setState("Error:"+ e.getLocalizedMessage());
-				log.error("readPage", e);
-				feedback.put("stop", System.currentTimeMillis());
+			feedback.put("effectiveuri", target.getRequestUri());
+
+			if(resp.getCode() != 200){
+				// HTTP client follows redirects. Should only get errors here
+				resp.getEntity().getContent().close();
+				return true;
+			}
+			//NOTE: rechecking MIME
+			final String tmp = resp.getEntity().getContentType();
+			String mime= tmp.split(";")[0];
+			feedback.put("mime",mime);
+			if (!"text/html".equals(mime) && !"text/css".equals(mime)) {
+				session.setState("Skipped: starting next");
+				feedback.put("skip", mime+" is not text/html or text/css");
+				log.debug("readPage", "Skipped: Mime from server: "+tmp);
+				resp.getEntity().getContent().close();
+				return false;
+			} else {
+				skip = false;
+			}
+			if (skip) {
+				feedback.put("skip", "skip set to true; general");
+				session.setState("Skipped: starting next");
+				//session.setStateExt("");
+				log.information("Skipped(readPage):"+link.toString());
+				log.debug("MIME", MimeTypes.getMime(link));
+				resp.getEntity().getContent().close();
 				return false;
 			}
+			//---END PAGE CHECKING
+			final char[] buff = new char[1024];
+			for(int i= 0; i < 3; i++, retry++){
+				session.setState("Reading");
+				session.setStateExt(link.toString());
+				max_count = resp.getEntity().getContentLength();
+				session.setCurrentProgress(0, max_count);
+				log.debug("readPage", "page size:"+max_count);
+				feedback.put("start", System.currentTimeMillis());
+
+				//TODO: check for character encoding
+				try(InputStreamReader in = new InputStreamReader(resp.getEntity().getContent(), "UTF-8")){
+					session.setState("Reading...");
+	//				log.information("Reading from site.");
+					cur_count = 0;
+					if (max_count > -1) {
+						//known size
+						session.setCurrentProgressBarText("0/"+max_count);
+						while (run && ((start = in.read(buff)) != -1)) {
+							store.append(buff, 0, start);
+							cur_count += start;
+							session.setCurrentProgress(cur_count, max_count);
+							session.setCurrentProgressBarText(cur_count+"/"+max_count);
+						}
+					} else {
+						//unknown size
+						session.setCurrentProgressBarText("0/??");
+						session.setCurrentProgress(0, 1);
+						while (run && ((start = in.read(buff)) != -1)) {
+							store.append(buff, 0, start);
+							cur_count += start;
+							session.setCurrentProgressBarText(cur_count+"/??");
+						}
+						session.setCurrentProgressBarText(cur_count+"/"+cur_count);
+						session.setCurrentProgress(1,1);
+					}
+					resp.close();
+					break;
+				} catch (final SocketTimeoutException e) {
+					session.setState("Timed out reading. Try "+ (retry+1) +" of 3");
+					log.warning("Timeout on read "+ (retry+1) +" of 3", e.getLocalizedMessage());
+					store.setLength(0);
+				} catch (SocketException e){
+					/*
+					 * Socket closed is an incomplete read.
+					 */
+					log.warning("Try "+ (retry+1) +" of 3", e.getLocalizedMessage());
+					store.setLength(0);
+				} catch (final EOFException e) {
+					log.warning("Try "+ (retry+1) +" of 3", e.getLocalizedMessage());
+					store.setLength(0);
+				} catch (final IOException e) {
+					resp.close();
+					session.setState("Error:"+ e.getLocalizedMessage());
+					log.error("readPage", e);
+					feedback.put("stop", System.currentTimeMillis());
+					return false;
+				}
+				resp.close();
+				if (retry < 2) {
+					synchronized(wait){
+						// maybe caused by reading too many in quick succession?
+						// anti-crawler logic?
+						try{
+							wait.wait(3000);
+						}catch(InterruptedException e){}
+					}
+					if (referer != null) {
+						resp=Session.conCont.get(link.toString(),new Header[]{new BasicHeader("Referer",referer.toString())},context);
+					}else{
+						resp=Session.conCont.get(link.toString(),null,context);
+					}
+					target = (HttpRequest)context.getAttribute(HttpCoreContext.HTTP_REQUEST);
+					feedback.put("effectiveuri", target.getRequestUri());
+				}
+			}//end for
 			resp.close();
-			if (retry < 2) {
-				synchronized(wait){
-					// maybe caused by reading too fast?
-					try{
-						wait.wait(3000);
-					}catch(InterruptedException e){}
+			if (retry == 3) {
+				switch (resp.getCode()) {
+				case -1:
+					break;
+				case java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
+				case java.net.HttpURLConnection.HTTP_RESET:
+				case java.net.HttpURLConnection.HTTP_INTERNAL_ERROR:
+				case 200:
+					addRedo(referer, link, depth);
 				}
-				if (referer != null) {
-					resp=Session.conCont.get(link.toString(),new Header[]{new BasicHeader("Referer",referer.toString())},context);
-				}else{
-					resp=Session.conCont.get(link.toString(),null,context);
-				}
-				target = (HttpRequest)context.getAttribute(HttpCoreContext.HTTP_REQUEST);
-				feedback.put("effectiveuri",target.getRequestLine().getUri());
-			}
-		}//end for
-		resp.close();
-		if (retry == 3) {
-			switch (resp.getStatusLine().getStatusCode()) {
-			case -1:
-				break;
-			case java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
-			case java.net.HttpURLConnection.HTTP_RESET:
-			case java.net.HttpURLConnection.HTTP_INTERNAL_ERROR:
-			case 200:
-				addRedo(referer, link, depth);
+				feedback.put("stop", System.currentTimeMillis());
+				log.warning("SKIPPED: Exceeded read retry limit. "+link+". HTTP code: "+resp.getCode());
+				return false;
 			}
 			feedback.put("stop", System.currentTimeMillis());
-			log.warning("SKIPPED: Exceeded read retry limit. "+link+". HTTP code: "+resp.getStatusLine().getStatusCode());
-			return false;
+		}finally{
+			if(resp != null) {
+				resp.close();
+			}
 		}
-		feedback.put("stop", System.currentTimeMillis());
 		return true;
 	}
-	/** Adds the page to the read queue.
+	/**
+	 * Checks validity and makes a QueueElement for adding to the read queue.
+	 * @param link
+	 * @param ref
+	 * @return The QueueElement or null if it shouldn't be added
+	 */
+	private final QueueElement getQueueElement(Uri link, final Uri ref){
+		link = new Uri(link.trimFragment());
+		if (session.isPrevRead(link.toString())) {
+			return null;
+		}
+
+		QueueElement qe=new QueueElement(link, ref);
+		if(currentReadLinks.contains(qe) || nextReadLinks.contains(qe)){
+			return null;
+		}
+
+		return qe;
+	}
+	/**
+	 * Adds the page to the read queue at the same depth.
+	 * Skips the {@link Options#isIgnoredPage(Uri, Uri)} check.
 	 * @param link Link to the page.
 	 * @param ref Link to the page link was found on.
-	 * @param depth The CURRENT read depth. (the depth that was passed to you)
 	 */
-	protected final void addToReadQueue(Uri link, final Uri ref, final int depth) {
-		if (!readDeep) return;
-		link = new Uri(link.trimFragment());
-		if (depth < toberead.length && !session.isPrevRead(link.toString())) {
-			if (toberead[depth]==null) {
-				toberead[depth] = new Queue<QueueElement>();
-				//toberead[depth] = new LinkedHashMap<Uri, String>();
-			}
-			QueueElement qe=new QueueElement(link, ref);
-			for (int i = 0; i < depth+1; i++) {
-				if (toberead[i].contains(qe)) return;
-			}
-			if (session.getOptions().isIgnoredPage(link, ref)) {
-				log.debug("ReadQueue:ignored",link);
-				return;
-			}
-			toberead[depth].offer(qe);
-			//toberead[depth].put(link, ref);
-			log.information("ReadQueue","Added "+link+" at depth "+depth);
+	protected final void addToCurrentReadQueueForce(Uri link, final Uri ref) {
+		QueueElement qe= getQueueElement(link, ref);
+		if(qe == null){
+			return;
+		}
+
+		if(currentReadLinks.offer(qe)){
+			log.information("ReadQueue","Added "+ link +" at depth "+ currentDepth);
 			session.prTotPageAdd(1);
+		}else{
+			log.error("addToCurrentReadQueueForce","Queue rejected offer");
+		}
+	}
+	/**
+	 * Adds the page to the read queue at the same depth.
+	 * @param link Link to the page.
+	 * @param ref Link to the page link was found on.
+	 */
+	protected final void addToCurrentReadQueue(Uri link, final Uri ref) {
+		QueueElement qe= getQueueElement(link, ref);
+		if(qe == null){
+			return;
+		}
+
+		if (session.getOptions().isIgnoredPage(link, ref)) {
+			log.debug("ReadQueue:ignored",link);
+			return;
+		}
+
+		if(currentReadLinks.offer(qe)){
+			log.information("ReadQueue","Added "+ link +" at depth "+ currentDepth);
+			session.prTotPageAdd(1);
+		} else {
+			log.error("addToCurrentReadQueue","Queue rejected offer");
+		}
+	}
+	/**
+	 * Adds the page to the read queue.
+	 * @param link Link to the page.
+	 * @param ref Link to the page link was found on.
+	 */
+	protected final void addToReadQueue(Uri link, final Uri ref) {
+		if (!readDeep) return;
+
+		QueueElement qe= getQueueElement(link, ref);
+		if(qe == null){
+			return;
+		}
+
+		if (session.getOptions().isIgnoredPage(link, ref)) {
+			log.debug("ReadQueue:ignored",link);
+			return;
+		}
+
+		if(nextReadLinks.offer(qe)){
+			log.information("ReadQueue","Added "+ link +" at depth "+ (currentDepth + 1));
+			session.prTotPageAdd(1);
+		} else {
+			log.error("addToReadQueue","Queue rejected offer");
+		}
+	}
+	/**
+	 * Skips the {@link Options#isIgnoredPage(Uri, Uri)} check and adds the page to the read queue.
+	 * @param link Link to the page.
+	 * @param ref Link to the page link was found on.
+	 */
+	protected final void addToReadQueueForce(Uri link, Uri ref){
+		if (!readDeep) return;
+
+		QueueElement qe= getQueueElement(link, ref);
+		if(qe == null){
+			return;
+		}
+
+		if(nextReadLinks.offer(qe)){
+			log.information("ReadQueue","Added "+ link +" at depth "+ (currentDepth + 1));
+			session.prTotPageAdd(1);
+		} else {
+			log.error("addToReadQueueForce","Queue rejected offer");
 		}
 	}
 	/**
@@ -451,6 +514,10 @@ public final class PageReader{
 		else
 			return tags.get(0).getChild(0).getContent();
 	}
+	/**
+	 * Sets the current read depth (sets the read queue we're processing)
+	 * @param i
+	 */
 	public final void setReadDepth(final int i) {
 		if (readDeep) {
 			readDepth = i;
@@ -462,6 +529,12 @@ public final class PageReader{
 		session.setStatus("URLs: "+session.getLinkCount()+" Retry: "+redo.size()+" Pages read: "+tre.getTotalSampleCount()+"/"+tre.getTotalItems()+" ETC:"+TimerFactory.getTime(tre.getRemaining())+" :: rate: "+tre.getRate());//(cPages-cPagesRead)*(cPagesRead/timer.elapsed()+1)));
 		//session.setStatus("URLs: "+session.getLinkCount()+" Retry: "+redo.size()+" Pages read: "+cPagesRead+"/"+cPages+" ETC:"+do_str.getTime(tre.getRemaining()));//(cPages-cPagesRead)*(cPagesRead/timer.elapsed()+1)));
 	}*/
+	/**
+	 * Adds the link to a retry queue. Useful for spotty connections and websites that delegate file hosting to random hosts
+	 * @param referer
+	 * @param link
+	 * @param depth
+	 */
 	public final void addRedo(final Uri referer, final Uri link, final int depth) {
 		final Site tmp = new Site(referer, link, depth);
 		if (!redo.contains(tmp)) {
@@ -469,28 +542,14 @@ public final class PageReader{
 			redo.push(tmp);
 		}
 	}
+	/**
+	 * Stops
+	 */
 	public final void stop() {
 		this.run = false;
 		if (pp!=null) {
 			pp.stop();
 		}
-	}
-	protected final void addToReadQueueForce(Uri link,Uri ref,int depth){
-		if (!readDeep) return;
-		link = new Uri(link.trimFragment());
-		if (depth < toberead.length && !session.isPrevRead(link.toString())) {
-			if (toberead[depth]==null) {
-				toberead[depth] = new Queue<QueueElement>();
-			}
-			QueueElement qe=new QueueElement(link, ref);
-			for (int i = 0; i < depth+1; i++) {
-				if (toberead[i].contains(qe)) return;
-			}
-			toberead[depth].offer(qe);
-			log.information("ReadQueue","ForceAdded "+link+" at depth "+depth);
-			session.prTotPageAdd(1);
-		}
-
 	}
 }
 class QueueElement{

@@ -76,5 +76,10 @@ public enum OptionKeys {
 	snatcher_minImgWidth,
 	snatcher_minImgHeight,
 	download_saveExternalUrlList,
-	download_saveLinkList
+	download_saveLinkList,
+	/**
+	 * Download items in reverse
+	 */
+	download_reverseNumbering,
+	download_separateByType
 }

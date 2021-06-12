@@ -2,6 +2,7 @@
 	<check name="download_keepDownloadLog" label="Keep a log of downloaded files" tooltip="Useful for when you like to rename files after downloading them." />
 	<check name="download_prettyFilenames" label="Pretty filenames" tooltip="Will make filenames more readable by removing some HTML escape sequences. (non-displayable characters and those forbidden in filenames will be left escaped)" />
 
+	<check name="download_separateByType" label="Separate by file category" tooltip="Images, videos, documents, etc get their own folder" />
 	<check name="download_sameFolder" label="Output all to same folder" tooltip="Useful for sites that use a hash folder system" />
 	<check name="download_separateByDomain" label="Domain subfolders" tooltip="Will separate them by domain" indent="1"/>
 
@@ -14,6 +15,7 @@
 	<check name="download_prependPage" label="Prepend page name to file name" tooltip="File x.png found on page y.html will be named y_x.png" />
 	<check name="download_ppAsDir" label="As folder" tooltip="File x.png found on page y.html will be named y\x.png"  indent="1"/>
 
-	<check name="download_alternateNumbering" label="Numbered File Names" tooltip="Uses a number scheme to name files. ####_### (pageNum_fileNum). Useful when sites give files non-sense names that throw off order." />
+	<check name="download_alternateNumbering" label="Numbered File Names" tooltip="Uses a number scheme to name files. ####_### (pageNum_fileNum). Useful when sites give files nonsense names that throw off order." />
+	<check name="download_reverseNumbering" label="Reverse" tooltip="Will start with the last file found"  indent="1"/>
 	<check name="download_sameSite" label="Same site only" tooltip="File's domain must match the page's domain." />
 </OptionPanel>

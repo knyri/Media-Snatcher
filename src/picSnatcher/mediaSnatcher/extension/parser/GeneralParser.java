@@ -4,7 +4,6 @@
 package picSnatcher.mediaSnatcher.extension.parser;
 
 import picSnatcher.mediaSnatcher.Constants;
-import picSnatcher.mediaSnatcher.OptionKeys;
 import picSnatcher.mediaSnatcher.PageParser;
 import picSnatcher.mediaSnatcher.PageReader;
 import picSnatcher.mediaSnatcher.Session;
@@ -36,17 +35,19 @@ public class GeneralParser extends PageParser{
 	private static final Log log=LogFactory.getLogFor(GeneralParser.class);
 	static{
 		log.setPrintTime(true);
+		log.setPrintDebug(true);
 	}
 
 	@Override
 	protected boolean processPage(final Page source,final Uri page,final Uri referer,final String title,final String basehref,final int depth){
 		log.debug("parsing",page);
-		//log.debug(source.toString());
+//		log.debug(source.toString());
 		//TODO: PageParser.preproccessPage(source,page). Then loop through following the pattern started on line 74
 		Uri tmp;
-		String link=null;
-		int lcount=0;
+		String link= null;
+		int lcount= 0;
 		// XXX: start processing
+		this.addNextLinks(source, page);
 		for(final Tag tag:source){
 			if(!isRunning()) break;
 			if(tag.hasProperty(Constants.atr_src)){
@@ -55,31 +56,11 @@ public class GeneralParser extends PageParser{
 						log.warning("Img missing src attribute", tag.toStringTagOnly());
 						continue;
 					}
-					String size;
-					if(tag.hasProperty(Constants.atr_width)){
-						size= tag.getProperty(Constants.atr_width);
-						if(size.endsWith("px") && size.length() > 2){
-							size= size.substring(0,size.length()-2);
-						}
-						try{
-							if(Integer.parseInt(size)<Integer.parseInt(session.getOptions().getOption(OptionKeys.snatcher_minImgWidth)))	continue;
-						}catch(NumberFormatException e){
-							log.warning("image width not a number", tag.getProperty(Constants.atr_width));
-						}
-					}
-					if(tag.hasProperty(Constants.atr_height)){
-						size= tag.getProperty(Constants.atr_height);
-						if(size.endsWith("px") && size.length() > 2){
-							size= size.substring(0,size.length()-2);
-						}
-						try{
-							if(Integer.parseInt(size)<Integer.parseInt(session.getOptions().getOption(OptionKeys.snatcher_minImgHeight)))	continue;
-						}catch(NumberFormatException e){
-							log.warning("image height not a number", tag.getProperty(Constants.atr_height));
-						}
+					if(!wantedImageSize(tag)){
+						continue;
 					}
 				}
-				link=tag.getProperty(Constants.atr_src);
+				link= tag.getProperty(Constants.atr_src);
 			}else if(tag.hasProperty(Constants.atr_href)){
 				if(do_str.CI.startsWith(tag.getProperty(Constants.atr_href),"javascript",0)||tag.getProperty(Constants.atr_href)=="#"){
 					link=PageParser.getLinkFromJavascript(tag);
@@ -106,12 +87,12 @@ public class GeneralParser extends PageParser{
 			// log.debug("after",link);
 			tmp=new Uri(link,page.getScheme());
 			if(tag.getName().equals(Constants.tag_iframe)){
-				addToReadQueueForce(tmp,page,depth);
+				addToReadQueueForce(tmp, page);
 			}else
 			if(tag.hasProperty(Constants.atr_href)){
-				addToReadQueue(tmp,page,depth);
+				addToReadQueue(tmp, page);
 			}
-			session.addLink(tmp,page,tag.getName().equals(Constants.tag_img));
+			session.addLink(tmp, page, tag.getName().equals(Constants.tag_img));
 		}// end for
 		return true;
 	}

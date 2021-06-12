@@ -19,6 +19,9 @@ public final class Constants{
 		tag_iframe=new CIString("iframe");
 
 	public static final CIString
+		atr_name= new CIString("name"),
+		atr_value= new CIString("value"),
+		atr_id= new CIString("id"),
 		atr_src= new CIString("src"),
 		atr_href= new CIString("href"),
 		atr_height= new CIString("height"),

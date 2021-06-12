@@ -58,9 +58,8 @@ public class Session implements Runnable {
 	private final TimeRemainingEstimator pr_tre = TimerFactory.getTRETimer(Algorithm.SAMPLE, 15);
 	private final Main main;
 	private final Options option;
-	private final UrlMap
-		Links = new UrlMap(),
-		linksOut=new UrlMap();
+	private final UrlMap linksOut=new UrlMap();
+	private final DownloadMap Links= new DownloadMap();
 	private final HashSet<String> dlList = new HashSet<String>();
 	private final HashSet<CIString> readList = new HashSet<CIString>();
 	private final Object waiter = new Object();
@@ -159,6 +158,8 @@ public class Session implements Runnable {
 	public void setCurrentProgressBarText(final String msg) {
 		main.setBottomProgressBarText(msg);
 	}
+	private int zeroDownloadCount= 0;
+	private int[] repeatDelays= new int[]{30,180,300,300,600,3600};
 	/* (non-Javadoc)
 	 * @see java.lang.Runnable#run()
 	 */
@@ -174,10 +175,10 @@ public class Session implements Runnable {
 			if (option.getOption(snatcher_saveFile).isEmpty()) {
 				main.Save(this);
 			}
-			final File save = new File(option.getOption(snatcher_saveFile)+".dlog");
-			log.information("setup", "Save file: "+save);
+			final File dlLogFile = new File(option.getOption(snatcher_saveFile)+".dlog");
+			log.information("setup", "Save file: "+dlLogFile);
 			try {
-				dlLog = new RandomAccessFile(save,"rw");
+				dlLog = new RandomAccessFile(dlLogFile,"rw");
 			} catch (final IOException e) {
 				log.log(0x20);
 				log.error("download", e);
@@ -265,20 +266,35 @@ public class Session implements Runnable {
 				readList.clear();
 				Links.clear();
 				linksOut.clear();
-				synchronized (waiter) {
+				synchronized(waiter){
 					final Timer t=new Timer(1000, new ActionListener(){
-						byte time=29;
+						int time= repeatDelays[zeroDownloadCount] - 1;
 						@Override
 						public void actionPerformed(final ActionEvent ae) {
 							time--;
 							main.setState("Waiting "+time+" seconds before next snatch run.");
-						}});
+						}
+					});
 					t.setRepeats(true);
-					try {
-						main.setState("Waiting 30 seconds before next snatch run.");
-						t.start();
-						if (run) {waiter.wait(30000);}
-					} catch (final InterruptedException e) {
+
+					int delay= repeatDelays[zeroDownloadCount];
+					if(downloader.getDownloadedCount() == 0){
+						if(zeroDownloadCount < repeatDelays.length){
+							zeroDownloadCount++;
+						}
+					}else if(zeroDownloadCount > 0){
+						zeroDownloadCount--;
+					}
+
+					try{
+						if(run){
+							main.setState("Waiting " + delay + " seconds before next snatch run.");
+							t.start();
+							while(delay-- > 0 && run){
+								waiter.wait(1000);
+							}
+						}
+					}catch(final InterruptedException e){
 						log.error("IGNORE", e);
 					}finally{
 						t.stop();
@@ -310,12 +326,12 @@ public class Session implements Runnable {
 	private static final String stripExtra(final Uri url) {
 		return url.getScheme()+"://"+url.getHost()+url.getPath()+url.getFile();
 	}
-	public void addLink(final Uri link, final Uri referer, boolean force) {
+	public void addLink(final Uri link, final Uri referer, String altFileName, boolean force) {
 		if (isPrevDownloaded(link.toString())) {
 			log.debug("addLink","Previously downloaded: "+link);
 			return;
 		}
-		if (option.isIgnored(link, referer)) {
+		if (option.isDownloadIgnored(link, referer)) {
 			log.debug("addLink","isIgnored: "+link);
 			return;
 		}
@@ -337,7 +353,7 @@ public class Session implements Runnable {
 				return;
 		}
 		if (force) {//add if forced
-			if (Links.put(stripExtra(referer),link)) {
+			if (Links.put(stripExtra(referer),link, altFileName)) {
 				log.debug("forced:added(addLink)", link.toString());
 			}
 			return;
@@ -350,17 +366,23 @@ public class Session implements Runnable {
 		final int dot = ext.lastIndexOf('.');
 		if(dot==-1){
 			// no extension add it and deal with it later
-			if (Links.put(stripExtra(referer),link))
+			if (Links.put(stripExtra(referer),link,altFileName)){
 				log.information("addLink", "added: "+link);
+			}
 		}else{
 			ext = ext.substring(ext.lastIndexOf('.')+1);
 			ext = MimeTypes.getMime(ext).get(0);
 			if (option.isWantedMIME(ext)) {
-				if (Links.put(stripExtra(referer),link))
+				if (Links.put(stripExtra(referer),link,altFileName)){
 					log.information("addLink", "added: "+link);
-			} else
+				}
+			} else {
 				log.debug("addLink", "unwanted MIME: "+link);
+			}
 		}
+	}
+	public void addLink(final Uri link, final Uri referer, boolean force) {
+		addLink(link, referer, null, force);
 	}
 	public void dumpOptions() {
 		option.dumpOptions();

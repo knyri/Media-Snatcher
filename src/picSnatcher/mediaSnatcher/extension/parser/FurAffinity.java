@@ -8,11 +8,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.message.BasicHeader;
 
 import picSnatcher.mediaSnatcher.Constants;
 import picSnatcher.mediaSnatcher.PageParser;
@@ -91,42 +90,44 @@ public final class FurAffinity extends PageParser {
 	}
 
 	@Override
-	protected boolean processPage(Page source, Uri page, Uri referer,
-			String title, String basehref, int depth) {
+	protected boolean processPage(Page source, Uri page, Uri referer, String title, String basehref, int depth) {
 		login(Session.conCont);
-		if(page.getPath().startsWith("/view/")||page.getPath().startsWith("/full/")){
-			List<Tag> tags = source.getTags("script");
-			int index=0;
-			boolean fHasContent=false;
-			for(Tag tag:tags){
-				String content = tag.getChild(0).getContent();
-				index=content.indexOf("full_url");
-				if(index!=-1){
-					index=content.indexOf('"',index)+1;
-					Uri url=new Uri(content.substring(index, content.indexOf('"',index)),page.getScheme());
+		String path= page.getPath();
+		if(path.startsWith("/view/") || path.startsWith("/full/")){
+			List<Tag> tags= source.getTags("script");
+			int index= 0;
+			boolean fHasContent= false;
+			for(Tag tag : tags){
+				String content= tag.getChild(0).getContent();
+				index= content.indexOf("full_url");
+				if(index != -1){
+					index= content.indexOf('"',index)+1;
+					Uri url= new Uri(content.substring(index, content.indexOf('"',index)),page.getScheme());
 					session.addLink(url, page, false);
-					fHasContent=true;
+					fHasContent= true;
 					break;
 				}
 			}
 			if(!fHasContent){
-				tags=source.getTags("object");
-				for(Tag tag:tags){
+				tags= source.getTags("object");
+				for(Tag tag : tags){
 					if("application/x-shockwave-flash".equals(tag.getProperty(Constants.atr_type))){
 						if(tag.hasProperty(Constants.atr_data))
 							session.addLink(new Uri(tag.getProperty(Constants.atr_data),page.getScheme()), page, false);
 					}
 				}
 			}
-		}else if(page.getPath().startsWith("/gallery/")||
-				 page.getPath().startsWith("/scraps/")||
-				 page.getPath().startsWith("/favorites/")){
-			boolean fHasContent=false;
+		}else if(
+			path.startsWith("/gallery/") ||
+			path.startsWith("/scraps/") ||
+			path.startsWith("/favorites/")
+		){
+			boolean fHasContent= false;
 			List<Tag> tags;
-			tags=source.getTags("a");
-			for(Tag tag:tags){
-				if(tag.getProperty(Constants.atr_href)!=null && tag.getProperty(Constants.atr_href).startsWith("/view/")){
-					addToReadQueue(new Uri(createURL(tag.getProperty(Constants.atr_href), page, basehref)), page, depth);
+			tags= source.getTags("a");
+			for(Tag tag : tags){
+				if(tag.getProperty(Constants.atr_href) != null && tag.getProperty(Constants.atr_href).startsWith("/view/")){
+					addToReadQueue(new Uri(createURL(tag.getProperty(Constants.atr_href), page, basehref)), page);
 					fHasContent=true;
 				}
 			}
@@ -135,10 +136,10 @@ public final class FurAffinity extends PageParser {
 			 * FurAffinity will produce a page even if it is past the number of images available
 			 */
 			if(fHasContent){
-				tags=source.getTags("button");
-				for(Tag tag:tags){
+				tags= source.getTags("button");
+				for(Tag tag : tags){
 					if(tag.getChild(0).getContent().equalsIgnoreCase("Next")){
-						addToReadQueue(new Uri(createURL(tag.getParent().getProperty(Constants.atr_action), page, basehref)), page, depth==0?depth:depth-1);
+						addToCurrentReadQueue(new Uri(createURL(tag.getParent().getProperty(Constants.atr_action), page, basehref)), page);
 						break;
 					}
 				}
@@ -159,7 +160,7 @@ public final class FurAffinity extends PageParser {
 		if(loggedin)return;
 		log.debug("Attempting login");
 		try{
-			HttpResponse response = httpclient.get(loginUri);
+			CloseableHttpResponse response = httpclient.get(loginUri);
 			EntityUtils.consume(response.getEntity());
 			log.debug(response);
 
@@ -172,8 +173,7 @@ public final class FurAffinity extends PageParser {
 			};
 
 			response = httpclient.post(loginPostUri,loginHeaders,nvps,Client.PostDataType.UrlEncoded,null);
-			HttpEntity entity = response.getEntity();
-			EntityUtils.consume(entity);
+			EntityUtils.consume(response.getEntity());
 		}catch(Exception e){log.error("Could not log in",e);}
 	}
 

@@ -5,8 +5,7 @@ import java.io.StringWriter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 
 import picSnatcher.mediaSnatcher.PageParser;
 import picSnatcher.mediaSnatcher.PageReader;
@@ -62,8 +61,6 @@ public class HitomiLa extends PageParser{
 				while(imageList.find()){
 					session.addLink(new Uri("http://a.hitomi.la/galleries/" + galleryId + '/' + imageList.group(1)), page, true);
 				}
-			}catch(ClientProtocolException e){
-				e.printStackTrace();
 			}catch(IOException e){
 				e.printStackTrace();
 			}

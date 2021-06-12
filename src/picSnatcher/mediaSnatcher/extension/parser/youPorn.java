@@ -54,23 +54,27 @@ public class youPorn extends PageParser{
 	@Override
 	protected boolean processPage(Page source,Uri page,Uri referer,String title,String basehref,int depth){
 		List<Tag> videos= source.getTags(Constants.tag_video);
-		log.debug("videos",videos);
+		log.debug("videos", videos);
 		for(Tag video: videos){
 			Uri tmp= new Uri(video.getProperty(Constants.atr_src));
-			session.addLink(tmp,page,true);
+			session.addLink(tmp, page, true);
 		}
 		Uri tmp;
 		String link=null;
 		int lcount=0;
 		// XXX: start processing
-		for(final Tag tag:source.getTags(Constants.tag_a)){
-			if(!isRunning()) break;
+		for(final Tag tag : source.getTags(Constants.tag_a)){
+			if(!isRunning()){
+				break;
+			}
 			if(tag.hasProperty(Constants.atr_href)){
 				if(do_str.CI.startsWith(tag.getProperty(Constants.atr_href),"javascript",0)||tag.getProperty(Constants.atr_href)=="#"){
-					link=PageParser.getLinkFromJavascript(tag);
-					if(link==null) continue;
+					link= PageParser.getLinkFromJavascript(tag);
+					if(link == null){
+						continue;
+					}
 				}else{
-					link=tag.getProperty(Constants.atr_href);
+					link= tag.getProperty(Constants.atr_href);
 				}
 			}else{
 				//no useful attributes, skip
@@ -79,20 +83,20 @@ public class youPorn extends PageParser{
 			}
 			// log.debug(tag.toStringTagOnly());
 			// log.debug("before",link);
-			link=createURL(link,page,basehref);
-			if(link==null){
+			link= createURL(link,page,basehref);
+			if(link == null){
 				continue;
 			}
 			lcount++;
 			session.setCurrentProgressBarText("Links:"+lcount);
-			link=UrlUtil.URLescape2(link);
+			link= UrlUtil.URLescape2(link);
 			// log.debug("after",link);
-			tmp=new Uri(link,page.getScheme());
+			tmp= new Uri(link,page.getScheme());
 			if(tag.getName().equals(Constants.tag_iframe)){
-				addToReadQueueForce(tmp,page,depth);
+				addToReadQueueForce(tmp, page);
 			}else
 			if(tag.hasProperty(Constants.atr_href)){
-				addToReadQueue(tmp,page,depth);
+				addToReadQueue(tmp, page);
 			}
 			//session.addLink(tmp,page,false);
 		}

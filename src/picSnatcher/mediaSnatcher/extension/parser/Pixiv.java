@@ -10,11 +10,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Properties;
 
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.message.BasicHeader;
 
 import picSnatcher.mediaSnatcher.PageParser;
 import picSnatcher.mediaSnatcher.PageReader;
@@ -103,7 +102,7 @@ public class Pixiv extends PageParser {
 		if(loggedin)return;
 		log.debug("Attempting login");
 		try{
-			HttpResponse response = httpclient.get(loginUri);
+			CloseableHttpResponse response = httpclient.get(loginUri);
 			EntityUtils.consume(response.getEntity());
 			log.debug(response);
 
@@ -114,8 +113,7 @@ public class Pixiv extends PageParser {
 				new StringParam("skip", "1")
 			};
 			response = httpclient.post(loginUri,loginHeaders,nvps,Client.PostDataType.UrlEncoded,null);
-			HttpEntity entity = response.getEntity();
-			EntityUtils.consume(entity);
+			EntityUtils.consume(response.getEntity());
 		}catch(Exception e){log.error("Could not log in",e);}
 	}
 

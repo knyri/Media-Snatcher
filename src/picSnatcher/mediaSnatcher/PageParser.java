@@ -11,10 +11,12 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.message.BasicHeader;
 
 import picSnatcher.mediaSnatcher.extension.ForwardRemoverFactory;
 import picSnatcher.mediaSnatcher.extension.OptionPanel;
@@ -101,6 +103,36 @@ public abstract class PageParser {
 		log.debug("#getHandler", pp.getClass().getCanonicalName());
 		return pp;
 	}
+	protected final boolean wantedImageSize(Tag tag){
+		String size;
+		if(tag.hasProperty(Constants.atr_width)){
+			size= tag.getProperty(Constants.atr_width);
+			if(size.endsWith("px") && size.length() > 2){
+				size= size.substring(0,size.length()-2);
+			}
+			try{
+				if(Integer.parseInt(size)<Integer.parseInt(session.getOptions().getOption(OptionKeys.snatcher_minImgWidth))){
+					return false;
+				}
+			}catch(NumberFormatException e){
+				log.warning("image width not a number", tag.getProperty(Constants.atr_width));
+			}
+		}
+		if(tag.hasProperty(Constants.atr_height)){
+			size= tag.getProperty(Constants.atr_height);
+			if(size.endsWith("px") && size.length() > 2){
+				size= size.substring(0,size.length()-2);
+			}
+			try{
+				if(Integer.parseInt(size)<Integer.parseInt(session.getOptions().getOption(OptionKeys.snatcher_minImgHeight))){
+					return false;
+				}
+			}catch(NumberFormatException e){
+				log.warning("image height not a number", tag.getProperty(Constants.atr_height));
+			}
+		}
+		return true;
+	}
 	/** Can the parser parse the page?
 	 * @param link URI for the page
 	 * @param page The parsed page
@@ -148,6 +180,40 @@ public abstract class PageParser {
 	 * ****** UTILITY FUNCTIONS ******
 	 * *******************************
 	 */
+	/**
+	 * Pattern that {@link #addNextLinks(Page, Uri, int)} uses
+	 */
+	private static final Pattern nextLinkText= Pattern.compile("^(>|&(gt|raquo);)|((&[^;]+;)* *next)");
+	/**
+	 * Searches for an adds (at the same read depth) most links that go to the next page.
+	 * @param source The parsed page
+	 * @param page The page URI
+	 */
+	protected final void addNextLinks(Page source, Uri page){
+		Matcher nextLinkMatcher= nextLinkText.matcher("");
+		for(Tag a: source.getTags(Constants.tag_a)){
+			nextLinkMatcher.reset(a.getTextContent().trim().toLowerCase());
+			if(!nextLinkMatcher.find()){
+//				log.debug("Not next link", a.getTextContent().trim().toLowerCase());
+				continue;
+			}
+			log.debug("Next link", a.getTextContent().trim().toLowerCase());
+
+			String link= a.getProperty(Constants.atr_href);
+			if(link == null || link.isEmpty()){
+				continue;
+			}
+			link= link.trim();
+			if(link.toLowerCase().startsWith("javascript") || "#".equals(link)){
+				link= PageParser.getLinkFromJavascript(a);
+				if(link == null){
+					continue;
+				}
+			}
+
+			this.addToCurrentReadQueue(new Uri(link), page);
+		}
+	}
 	/** Fixes/resolves the URL to be in the proper form. Also attempts to remove
 	 * any forwarders. Returns NULL if it is not a valid HTTP url.
 	 * @param link link from the page
@@ -159,16 +225,19 @@ public abstract class PageParser {
 		linko = linko.replaceAll("[\n\r\t\\\\\"\\\\']", "");
 		linko = linko.replaceAll("&amp;", "&");
 		if (linko.isEmpty()) {
-			if (basehref==null)
+			if (basehref==null){
 				return page.getOriginalUri();
-			else {
+			} else {
 				linko = basehref;
 			}
+		}
+		if(linko.charAt(0) == '?'){
+			linko= page.getHost() + page.getPath() + page.getFile() + linko;
 		}
 		final Uri link = new Uri(linko,page.getScheme());
 		log.debug("link",link.getScheme()+"]["+link.getHost()+"]["+link.getPath()+"]["+link.getFile()+"]["+link.getQuery()+"]["+link.getFragment());
 		log.debug("page",page.getScheme()+"]["+page.getHost()+"]["+page.getPath()+"]["+page.getFile()+"]["+page.getQuery()+"]["+page.getFragment());
-		//Return null if the scheme is not http
+		//Return null if the scheme is not http[s]
 		if (!link.getScheme().isEmpty() && !"http".equalsIgnoreCase(link.getScheme()) && !"https".equalsIgnoreCase(link.getScheme())) return null;
 		if (link.getScheme().isEmpty()) {
 			//no scheme. Get it from the page
@@ -193,21 +262,26 @@ public abstract class PageParser {
 		log.debug(linko);
 		return linko;
 	}
+	/** Adds a link to the read queue at the same depth
+	 * @param link Link to add
+	 * @param ref The referrer or null
+	 */
+	protected final void addToCurrentReadQueue(final Uri link, final Uri ref) {
+		preader.addToCurrentReadQueue(link, ref);
+	}
 	/** Adds a link to the read queue
 	 * @param link Link to add
 	 * @param ref The referrer or null
-	 * @param depth Depth that was passed to you
 	 */
-	protected final void addToReadQueue(final Uri link, final Uri ref, final int depth) {
-		preader.addToReadQueue(link, ref, depth);
+	protected final void addToReadQueue(final Uri link, final Uri ref) {
+		preader.addToReadQueue(link, ref);
 	}
 	/** Forces a page to be added to the read queue. This is mainly for pages that contain frames or iframes
 	 * @param link The link to add
 	 * @param ref the referrer
-	 * @param curdepth the current read depth
 	 */
-	protected final void addToReadQueueForce(final Uri link, final Uri ref, final int curdepth) {
-		preader.addToReadQueueForce(link, ref, curdepth);
+	protected final void addToReadQueueForce(final Uri link, final Uri ref) {
+		preader.addToReadQueueForce(link, ref);
 	}
 	/** Attempts to extract URLs from javascript.
 	 * @param tag
@@ -283,7 +357,7 @@ public abstract class PageParser {
 				if(fetch){
 					store.setLength(0);
 					try{
-						HttpResponse resp= Session.conCont.get(PageParser.createURL(tag.getProperty(Constants.atr_href),referrer,null),headers);
+						CloseableHttpResponse resp= Session.conCont.get(PageParser.createURL(tag.getProperty(Constants.atr_href),referrer,null),headers);
 						RWUtil.readInto(new InputStreamReader(resp.getEntity().getContent(),"UTF-8"),store);
 						retv.addAll(PageParser.getLinkFromCss(store.toString()));
 					}catch(final IOException e){}

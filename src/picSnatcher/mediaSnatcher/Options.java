@@ -69,6 +69,7 @@ import simple.io.FileUtil;
 import simple.net.Uri;
 import simple.util.logging.Log;
 import simple.util.logging.LogFactory;
+import simple.util.logging.LogLevel;
 
 /**
  * <br>Created: Sep 7, 2008
@@ -453,7 +454,7 @@ public final class Options {
 		}
 		for (int i = 0; i < ignoredl.length; i++) {
 			if (link.indexOf(ignoredl[i])>=0) {
-				log.debug("in ignored list", "Matched ignore page item \""+ignoredl[i]+"\" in "+link);
+				log.information("Matched ignored page item \""+ignoredl[i]+"\" in "+link);
 				return true;
 			}
 		}
@@ -507,6 +508,10 @@ public final class Options {
 			return true;//failed list checks(ignored)
 		}
 		//it's not ignored; check the mime
+		if(log.getPrint(LogLevel.DEBUG)){
+			String s= link.getFile();
+			log.debug(s.substring(s.lastIndexOf('.') + 1));
+		}
 		final String mime = MimeTypes.getMime(link).get(0);
 		if (mime.isEmpty() || "text/html".equals(mime)){
 			return false;
@@ -519,7 +524,7 @@ public final class Options {
 	 * @param ref
 	 * @return
 	 */
-	public boolean isIgnored(final Uri link, final Uri ref) {
+	public boolean isDownloadIgnored(final Uri link, final Uri ref) {
 		if (isWantedListCheck(link.toString())) {
 			if (!sameSiteCheck(link, ref))
 				return true;
@@ -642,13 +647,12 @@ public final class Options {
 	 * @return true if the domains match, referral==null, or sameSite()==false
 	 */
 	private boolean sameSiteCheck(final Uri link, final Uri ref) {
-		if (getTF(getOption(snatcher_sameSite)) && ref != null) {
+		if (getTF(getOption(download_sameSite)) && ref != null) {
 			if (!link.getDomain().equalsIgnoreCase(ref.getDomain())) {
-				log.debug("same site check","mismatch domains: link["+link+"] -- referrer["+ref.getDomain()+"]");
+				log.information("same site check","mismatch domains: link["+link+"] -- referrer["+ref.getDomain()+"]");
 				return false;
 			}
-		} else
-			return true;
+		}
 		return true;
 	}
 	public boolean isWantedMIME(final String mime) {

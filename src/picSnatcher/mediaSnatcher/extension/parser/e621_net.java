@@ -1,28 +1,37 @@
 package picSnatcher.mediaSnatcher.extension.parser;
 
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.message.BasicHeader;
+
 import picSnatcher.mediaSnatcher.Constants;
-import picSnatcher.mediaSnatcher.OptionKeys;
 import picSnatcher.mediaSnatcher.PageParser;
 import picSnatcher.mediaSnatcher.PageReader;
 import picSnatcher.mediaSnatcher.Session;
 import picSnatcher.mediaSnatcher.extension.OptionPanel;
 import picSnatcher.mediaSnatcher.extension.OptionPanelListener;
+import simple.collections.FixedSizeArrayList;
 import simple.net.Uri;
+import simple.net.http.Client;
+import simple.net.http.clientparams.ClientParam;
+import simple.net.http.clientparams.StringParam;
+import simple.parser.ml.InlineLooseParser;
 import simple.parser.ml.Page;
 import simple.parser.ml.Tag;
-import simple.util.FixedSizeArrayList;
-import simple.util.UrlUtil;
-import simple.util.do_str;
+import simple.parser.ml.html.HtmlConstants;
 import simple.util.logging.Log;
 import simple.util.logging.LogFactory;
 
 public class e621_net extends PageParser implements OptionPanelListener{
 	private static final Log log=LogFactory.getLogFor(e621_net.class);
+	private static boolean loggedin= false;
 	static{
 		log.setPrintTime(true);
 		log.setPrintDebug(true);
@@ -33,7 +42,42 @@ public class e621_net extends PageParser implements OptionPanelListener{
 	public e621_net(final PageReader preader,final Session session){
 		super(preader,session);
 		optionPanel.addListener(this);
-		this.panelClosed(optionPanel);
+	}
+	static final Header[] loginHeaders = new BasicHeader[] {
+		new BasicHeader("Content-type","application/x-www-form-urlencoded"),
+		new BasicHeader("Referer", "https://e621.net/session/new")
+	};
+	private static void login(Client httpclient){
+		if(loggedin)return;
+
+		log.debug("Attempting login");
+		String
+			user= optionPanel.getItemValue("user"),
+			pass= optionPanel.getItemValue("pass"),
+			token= null
+		;
+		try{
+			CloseableHttpResponse response = httpclient.get("https://e621.net/session/new");
+			Page p= InlineLooseParser.parse(new InputStreamReader(response.getEntity().getContent()), HtmlConstants.PARSER_CONSTANTS);
+			for(Tag t: p.getTags("form")){
+				for(Tag i: t.getChildren("input")){
+					if(i.hasProperty(Constants.atr_name) && i.getProperty(Constants.atr_name).equals("authenticity_token")){
+						token= i.getProperty(Constants.atr_value);
+					}
+				}
+			}
+			log.debug(response);
+
+			ClientParam[] nvps = new ClientParam[] {
+				new StringParam("authenticity_token", token),
+				new StringParam("name", user),
+				new StringParam("password", pass),
+				new StringParam("remember", "1"),
+				new StringParam("commit", "Submit")
+			};
+			response = httpclient.post("https://e621.net/session",loginHeaders,nvps,Client.PostDataType.UrlEncoded,null);
+			EntityUtils.consume(response.getEntity());
+		}catch(Exception e){log.error("Could not log in",e);}
 	}
 
 	@Override
@@ -62,102 +106,31 @@ public class e621_net extends PageParser implements OptionPanelListener{
 		log.debug("parsing",page);
 		//log.debug(source.toString());
 		//TODO: PageParser.preproccessPage(source,page). Then loop through following the pattern started on line 74
-		Uri tmpLink;
-		String link=null;
-		int lcount=0;
-		// XXX: start processing
-		for(final Tag tag:source){
-			if(!isRunning()) break;
-			if(tag.hasProperty(Constants.atr_src)){
-				if(tag.getName().equals(Constants.tag_img)){
-					if(!tag.hasProperty(Constants.atr_src)){
-						log.warning("Img missing src attribute", tag.toStringTagOnly());
-						continue;
-					}
-					String size;
-					if(tag.hasProperty(Constants.atr_width)){
-						size= tag.getProperty(Constants.atr_width);
-						if(size.endsWith("px") && size.length() > 2){
-							size= size.substring(0,size.length()-2);
-						}
-						try{
-							if(Integer.parseInt(size)<Integer.parseInt(session.getOptions().getOption(OptionKeys.snatcher_minImgWidth))){
-								continue;
-							}
-						}catch(NumberFormatException e){
-							log.warning("image width not a number", tag.getProperty(Constants.atr_width));
-						}
-					}
-					if(tag.hasProperty(Constants.atr_height)){
-						size= tag.getProperty(Constants.atr_height);
-						if(size.endsWith("px") && size.length() > 2){
-							size= size.substring(0,size.length()-2);
-						}
-						try{
-							if(Integer.parseInt(size)<Integer.parseInt(session.getOptions().getOption(OptionKeys.snatcher_minImgHeight))){
-								continue;
-							}
-						}catch(NumberFormatException e){
-							log.warning("image height not a number", tag.getProperty(Constants.atr_height));
-						}
-					}
+		log.information(page.getPath());
+		boolean found=false;
+		if(page.getPath().startsWith("/posts/")){
+			for(Tag a: source.getTags(Constants.tag_a)){
+				if("Download".equals(a.getTextContent())){
+					session.addLink(new Uri(a.getProperty(Constants.atr_href),page.getScheme()), page, true);
+					found= true;
+					break;
 				}
-				link=tag.getProperty(Constants.atr_src);
-			}else if(tag.hasProperty(Constants.atr_href)){
-				if(do_str.CI.startsWith(tag.getProperty(Constants.atr_href),"javascript",0)||tag.getProperty(Constants.atr_href)=="#"){
-					link=PageParser.getLinkFromJavascript(tag);
-					if(link==null) continue;
-				}else{
-					link=tag.getProperty(Constants.atr_href);
-				}
-			}else if(tag.hasProperty(Constants.atr_background)){
-				link=tag.getProperty(Constants.atr_background);
-			}else{
-				//no useful attributes, skip
-				//TODO: javascript check for things like document.location and open window
-				continue;
 			}
-			// log.debug(tag.toStringTagOnly());
-//			log.debug("before",link);
-			link=createURL(link,page,basehref);
-			if(link==null){
-				continue;
-			}
-			lcount++;
-			session.setCurrentProgressBarText("Links:"+lcount);
-			link=UrlUtil.URLescape2(link);
-			// log.debug("after",link);
-			tmpLink=new Uri(link,page.getScheme());
-//			log.debug("path",tag.getName() + " = " + tmpLink.getPath());
-			if(tag.getName().equals(Constants.tag_a) && tmpLink.getPath().startsWith("/post/show/")){
-//				log.debug("Running want test");
-				Tag img= null;
-				for(Tag t: tag){
-					if(t.getName().equals(Constants.tag_img)){
-						img= t;
-						break;
+			if(!found){
+				for(Tag img: source.getTags(Constants.tag_img)){
+					if("image".equals(img.getProperty(Constants.atr_id))){
+						log.debug("Adding", img.getProperty(Constants.atr_src));
+						session.addLink(new Uri(img.getProperty(Constants.atr_src),page.getScheme()), page, true);
 					}
 				}
-				if(img != null){
-					String rawtags= null;
-					if(img.hasProperty(Constants.atr_title)){
-						rawtags= img.getProperty(Constants.atr_title);
-					}else if(img.hasProperty(Constants.atr_alt)){
-						rawtags= img.getProperty(Constants.atr_alt);
-					}else{
-						log.debug("Tags for image not found");
-					}
-					if(rawtags != null){
-						int newline= rawtags.indexOf('\n');
-						if(newline == -1){
-							newline= rawtags.indexOf('\r');
-						}
-						String[] tags;
-						if(newline == -1){
-							tags= rawtags.trim().split(" ");
-						}else{
-							tags= rawtags.substring(0,newline).trim().split(" ");
-						}
+			}
+		}else{
+			for(Tag a: source.getTags(Constants.tag_a)){
+				if(a.getProperty(Constants.atr_href).startsWith("/posts/")){
+					log.information("testing",a.getProperty(Constants.atr_href));
+					for(Tag img: a.findTag(Constants.tag_img)){
+						log.information("tags",img.getProperty(Constants.atr_alt));
+						String[] tags= img.getProperty(Constants.atr_alt).trim().split(" ");
 						HashSet<String> imgTags= new HashSet<>();
 						for(String stag: tags){
 							imgTags.add(stag);
@@ -180,19 +153,11 @@ public class e621_net extends PageParser implements OptionPanelListener{
 						if(!wantedFlag){
 							continue;
 						}
+						addToCurrentReadQueue(new Uri(createURL(a.getProperty(Constants.atr_href),page,basehref)),page);
 					}
-				}else{
-					log.debug("Want test: Image tag not found.");
 				}
 			}
-			if(tag.getName().equals(Constants.tag_iframe)){
-				addToReadQueueForce(tmpLink,page,depth);
-			}else
-			if(tag.hasProperty(Constants.atr_href)){
-				addToReadQueue(tmpLink,page,depth);
-			}
-			session.addLink(tmpLink,page,tag.getName().equals(Constants.tag_img));
-		}// end for
+		}
 		return true;
 	}
 
@@ -227,12 +192,12 @@ public class e621_net extends PageParser implements OptionPanelListener{
 		}
 		public boolean test(HashSet<String> tags){
 			if(ignore.isEmpty() || !tags.containsAll(ignore)){
-				log.debug("not ignored: didn't match", tags);
+//				log.debug("not ignored: didn't match", tags);
 				return false;
 			}
 			for(String exception : exceptions){
 				if(tags.contains(exception)){
-					log.debug("not ignored: had exception", tags);
+//					log.debug("not ignored: had exception", tags);
 					return false;
 				}
 			}
@@ -251,7 +216,10 @@ public class e621_net extends PageParser implements OptionPanelListener{
 		// TODO Auto-generated method stub
 
 	}
-
+	@Override
+	public void panelLoaded(OptionPanel p){
+		panelClosed(p);
+	}
 	@Override
 	public void panelClosed(OptionPanel panel){
 		wanted.clear();
@@ -283,6 +251,9 @@ public class e621_net extends PageParser implements OptionPanelListener{
 				}
 			}
 			ignored.add(new IgnoreFilter(ignore,exception));
+		}
+		if(!optionPanel.getItemValue("user").trim().isBlank()){
+			login(Session.conCont);
 		}
 	}
 }

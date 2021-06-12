@@ -27,11 +27,11 @@ import javax.swing.text.JTextComponent;
 
 import picSnatcher.mediaSnatcher.Options;
 import simple.CIString;
+import simple.collections.CIHashtable;
 import simple.gui.factory.SJPanel;
 import simple.parser.ml.InlineLooseParser;
 import simple.parser.ml.Page;
 import simple.parser.ml.Tag;
-import simple.util.CIHashtable;
 
 /**
  * All names are case insensitive.
@@ -50,8 +50,12 @@ public final class OptionPanel {
 	private final JPanel center = SJPanel.makeBoxLayoutPanelY();
 	private final CIHashtable<JComponent> items = new CIHashtable<JComponent>();
 	private LinkedList<OptionPanelListener> listeners= new LinkedList<>();
+	private boolean built= false;
 	public void addListener(OptionPanelListener listener){
 		listeners.add(listener);
+		if(built){
+			listener.panelLoaded(this);
+		}
 	}
 	public void fireClosed(){
 		for(OptionPanelListener listener : listeners){
@@ -63,6 +67,15 @@ public final class OptionPanel {
 		}
 	}
 	public void fireOpened(){
+		for(OptionPanelListener listener : listeners){
+			try{
+				listener.panelOpened(this);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
+	public void fireLoaded(){
 		for(OptionPanelListener listener : listeners){
 			try{
 				listener.panelOpened(this);
@@ -107,6 +120,8 @@ public final class OptionPanel {
 				}
 				build(t);
 			}
+			built= true;
+			fireLoaded();
 		}catch(IOException | ParseException e){
 			JTextArea error= new JTextArea();
 			error.append("ERROR: Failed to load options\n");
@@ -135,6 +150,8 @@ public final class OptionPanel {
 				}
 				build(t);
 			}
+			built= true;
+			fireLoaded();
 		}catch(Exception e){
 			JTextArea error= new JTextArea();
 			error.append("ERROR: Failed to load options\n");

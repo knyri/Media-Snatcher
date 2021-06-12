@@ -1,6 +1,6 @@
 <OptionPanel>
-	<text name="user" label="Username" value="" />
-	<text name="pass" label="Password" value="" />
+	<textarea name="sites" tooltip="Sites that are 'Booru' type websites" label="Domains" value="safebooru.org
+" />
 	<textarea name="ignored" tooltip="Ignores these tag combinations. One combination per line. Works the same as the ignore feature on the website." label="Ignore tags:" value="" />
 	<textarea name="wanted" tooltip="Only downloads these tag combinations. One combination per line." label="Wanted Tags:" value="" />
 </OptionPanel>
