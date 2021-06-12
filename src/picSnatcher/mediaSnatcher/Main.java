@@ -89,11 +89,12 @@ public class Main implements ActionListener {
 		/*
 		log = LogFactory.getLogFor(MimeTypes.class);
 		log.setPrintDebug(false);
+		/**/
 		log = LogFactory.getLogFor(simple.parser.ml.InlineLooseParser.class);
 		log.setPrintDebug(false);
 		log.setPrintWarning(false);
 		/**/
-		/*
+		//*
 		log = LogFactory.getLogFor(simple.net.http.Client.class);
 		log.setPrintInformation(true);
 		log.setPrintWarning(true);
@@ -103,7 +104,7 @@ public class Main implements ActionListener {
 		log = LogFactory.getLogFor(Options.class);
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
-		/**/ /*
+		/**/ //*
 		log = LogFactory.getLogFor(Session.class);
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
@@ -112,6 +113,9 @@ public class Main implements ActionListener {
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
 		/**/ /*
+		log = LogFactory.getLogFor(CharBuffer.class);
+		log.setPrintDebug(true);
+		/**/ //*
 		log = LogFactory.getLogFor(PageReader.class);
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
@@ -120,7 +124,7 @@ public class Main implements ActionListener {
 		log.setPrintDebug(true);
 		log.setPrintInformation(true);
 		//*/
-		//*
+		/*
 		log = LogFactory.getLogFor(Downloader.class);
 		log.setPrintInformation(true);
 		log.setPrintWarning(true);
@@ -142,21 +146,33 @@ public class Main implements ActionListener {
 	/** The name pretty much explains it */
 	protected static final String LOG_FOLDER = "mediaSnatcherLogs"+File.separator;
 	private final JTextField siteURL = new JTextField();
-	private final JNumberField synGAL = new JNumberField("0",5),
-	staGAL = new JNumberField("0",5),
-	endGAL = new JNumberField("0",5),
-	incGAL = new JNumberField("1",5);
+	private final JNumberField
+		synGAL = new JNumberField("0",5),
+		staGAL = new JNumberField("0",5),
+		endGAL = new JNumberField("0",5),
+		incGAL = new JNumberField("1",5)
+	;
 	private final JComboBox<UriFormatIterator> list = new JComboBox<UriFormatIterator>();
 	final JButton GO = SwingFactory.makeJButton("Snatch", "start", this);
-	private final JButton Add = SwingFactory.makeJButton("Add", "ad", this), rem = SwingFactory.makeJButton("Remove", "rem", this), remAll = SwingFactory.makeJButton("Clear", "cl", this);
-	private final JLabel state = new JLabel(" "),//General State
-	stateExt = new JLabel(" "),//Extended info about state
-	status = new JLabel(" ");//Status text(bottom of frame)
-	final JProgressBar totPBar = new JProgressBar(0,100),//progress of items to be downloaded
-	curPBar = new JProgressBar(0,100);//progress of current download
-	//memUsage = new JProgressBar(0,0);
-	private static final javax.swing.filechooser.FileFilter saveFilter = FilterFactory.createFileChooserFilter(".msl" ,"mediaSnatcher List (.msl)"),
-	savedFileListFilter = FilterFactory.createFileChooserFilter(".msf", "mediaSnatcher File List (.msf)");
+	private final JButton
+		Add = SwingFactory.makeJButton("Add", "ad", this),
+		rem = SwingFactory.makeJButton("Remove", "rem", this),
+		remAll = SwingFactory.makeJButton("Clear", "cl", this)
+	;
+	private final JLabel
+		state = new JLabel(" "),//General State
+		stateExt = new JLabel(" "),//Extended info about state
+		status = new JLabel(" ")//Status text(bottom of frame)
+	;
+	final JProgressBar
+		totPBar = new JProgressBar(0,100),//progress of items to be downloaded
+		curPBar = new JProgressBar(0,100)//progress of current download
+		//memUsage = new JProgressBar(0,0)
+	;
+	private static final javax.swing.filechooser.FileFilter
+		saveFilter = FilterFactory.createFileChooserFilter(".msl" ,"mediaSnatcher List (.msl)"),
+		savedFileListFilter = FilterFactory.createFileChooserFilter(".msf", "mediaSnatcher File List (.msf)")
+	;
 	private final Main main = this;
 	protected final JFrame frame;
 	/** Entry point. Loads the forward removers from <i>picSnatcher/mediaSnatcher3/forwarders.ms3.conf</i>
@@ -183,7 +199,7 @@ public class Main implements ActionListener {
 				break;
 			}
 			try {
-				ForwardRemoverFactory.addHandler((ForwardRemover) Class.forName(line).newInstance());
+				ForwardRemoverFactory.addHandler((ForwardRemover) Class.forName(line).getDeclaredConstructor().newInstance());
 			} catch (final Exception e) {	e.printStackTrace(); }
 		} while (true);
 		FileUtil.close(handlers);
